@@ -1,0 +1,103 @@
+---
+title: "BDA_hw1"
+author: "Michelle DePrenger-Levin"
+date: "January 17, 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+install.packages("swirl")
+library(swirl)
+swirl()
+```
+info() to display options again
+When the correlated regressor is omited the remaining one is biased. Not sure why the answer should be 1 (maybe run histogram of that alone first? what does it mean, the coefficient?)
+Shapiro-Wilk test with normality as null hypothesis shapiro.text(fit$residuals) so significant p would mean significantly different that normal. P>0.05 'fails to reject normality'    
+
+```{r}
+#the dice question?
+hist(rnorm(mean=3.5,sd = 3.5*.68,n=10))
+trunc(rnorm(mean=3.5,n=10))
+
+dice <- sample(1:6, 100, replace=TRUE)
+
+hist(sample(1:6, 1000, replace=TRUE))
+hist(dice)
+head(dice,30)
+```
+
+Density plot
+```{r}
+# Zhang et al 2011, PlosOne
+#standard deviation from standard error
+n <- 80
+SEmux <-0.03
+#SEmux <- samplesd/sqrt(n)
+samplesd <- SEmux*sqrt(n)
+
+x<-seq(18,27,length=1000)
+plot(x, dnorm(x, mean=25, sd=samplesd))
+points(x, dnorm(x, mean=19, sd=samplesd),col="red")
+
+n2<-79
+SEmux2 <- 4
+SEmux3 <- 3
+samplesd2 <- SEmux2*sqrt(n)
+samplesd3 <- SEmux3*sqrt(n)
+x<-seq(86,96,length=1000)
+plot(x,dnorm(x,mean=86, sd=samplesd2))
+points(x, dnorm(x, mean=19, sd=samplesd2),col="red")
+```
+
+
+#1/22/2018    
+```{r}
+library(RCurl)
+library(devtools)
+install_github("genomicsclass/dagdata")
+dir<- system.file(package = "dagdata")
+
+dat <- read.csv(text=getURL("https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/femaleMiceWeights.csv"))
+
+head(dat)
+#blarg, dplyr
+library(dplyr)
+chow <- filter(dat, Diet=="chow")
+#or
+dat[dat$Diet=="chow",]
+
+chowVals <- select(chow, Bodyweight) #Still a column in data frame
+#or
+dat[dat$Diet=="chow","Bodyweight"] #a vecor
+
+#Mammalian sleep
+msleep <- read.csv(text=getURL("https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/msleep_ggplot2.csv"))
+
+#1.
+class(msleep) #data.frame
+head(msleep)
+table(msleep$order)
+#2.
+nrow(msleep[msleep$order=="Primates",]) #12
+#dplyr way...
+nprimates <- filter(msleep,order=="Primates") %>% nrow
+#3.
+filter(msleep,order=="Primates") %>% class #data.frame
+#4.
+filter(msleep,order=="Primates") %>% select(.,"sleep_total") %>% sum #126
+sum(msleep$sleep_total[msleep$order=="Primates"]) #126
+#5.
+filter(msleep,order=="Primates") %>% select(.,"sleep_total") %>% unlist %>% mean #10.5
+mean(msleep$sleep_total[msleep$order=="Primates"]) #10.5
+#6.
+filter(msleep,order=="Primates") %>% summarize(mean= mean(sleep_total))
+
+
+```
+
+
+
