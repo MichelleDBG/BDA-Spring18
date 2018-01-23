@@ -1,0 +1,91 @@
+---
+title: "Lab 1 - density histograms and the CLT"
+output:
+  html_document: default
+  html_notebook: default
+  pdf_document:
+    fig_caption: yes
+    fig_height: 4
+    fig_width: 5
+---
+
+This lab will introduce R Notebooks, R Markdown files, and knitR. You will use these formats to keep lab notes and for submitting online. These instructions don't cover these topics. Links to help with this are provided on canvas, and we will go over the basics in depth during lab. As with so many things in R, there is no single best way to do this, and it's just another language that you will need to pick up along the way. Fortunately, it's not as weird as R itself...
+
+One funny quirk about using R Markdown files and knitR is that the Markdown environment is not directly aware of the R environment (workspace) in yoru active sessions. That means the Markdown file can't see the data you've imported, functions you've written, variales you've named etc. You need to write all the code for replicating that into the markdown file. This is intentional. The markdown files are meant to be used for reproducible work. That is, the document is self-contained by design so that someone else can recreate exactly what you've done using the exact same data. It's a pretty neat feature once you get over the frustration of rectifying the disconnect between your active environment and the R Markdown environment. To make this transition in thinking a bit simpler, we'll write code this week to generate all our data (no importing of csv files yet).
+
+OK, let's learn how to plot histograms using density curves. Density curves are useful as they represent pdfs. Empirical pdfs can be created and plotted from data, and it's important to realize that they are the same thing as the standard block based histogram; the y-axis is rescaled, and the stairsteps are smoothed with a curve. OK, let's make up a datset and take a look:
+
+```{r}
+set.seed(1000)
+x <- sample(-50:150,75,TRUE) #TRUE is with replacement
+hist(x,main="random sample with replacement of 75 numbers between -50:150")
+```
+
+#####Question 1
+a. What is the scale for the random variable x that we just created? 
+    - This in the interval scale of -50 to 150
+b. What is the distriubtion for the random variable x? Hint: look at the code that generated the distribution and think about probabilites of sampling across the domain.
+    - Should be a normal distribution between -50 and 150
+c. Why does the observed distribution look different than what you might expect for the distribution you named in b?
+    - Replacement of values allows for psudo-random alternate peaks (not normally distributed)
+
+***
+
+Notice the y-axis label. It tells us the number of times we recorded a number in the interval defined by the x-extent of the histogram bars. We can rescale the y-axis such that the histogram represnets a proper probability distribution. We don't actually have to rescale manually, as R kows this is something that data analysts commonly do - we just set the freq argument to F and we'll get density equivalency on the y-axis. Once we rescale the y-axis, we can add the smoothed density curve.
+
+```{r}
+hist(x,main="Random sample with replacement of \n 75 numbers between 1:100",freq=F) # \n insets a carriage return
+lines(density(x))
+```
+
+#####Question 2
+a. How does changing the y-axis scale from the frequency of observations to "density" give us a probability distribution? Hint: Think about the definition of a probability distribution, and the area of a rectangle.
+    - The probability of pulling any number within that bin (by the number of times they were selected)
+b. What do you think would happen if we tried to add the density curve without first rescalign the y-axis? Hint: write a little code to try it!!
+    - The frequency and density scales are too far off to visually see on one y-axis
+```{r}
+hist(x,main="Random sample with replacement of \n 75 numbers between 1:100",freq=TRUE) # \n insets a carriage return
+lines(density(x))
+```
+
+***
+
+OK, what a weird distribution. Now let's invoke the CLT by generating a sampling distribution for the mean, estimated from n=75 data points. The book gives nice examples for looping to do this kind of thing, but here we'll demonstrate a slightly quicker way of achieving the same end, and in the process pick up some skills for data management and organization. Our aim is to generate means for each of 1000 replicated samples of 75 random draws from the set -100:100. Let's make a huge matrix where each column is a replicate, and each row is a sample. This will give us 75x1000 cells, organized such that each set of 75 is a different sample. The trick here comes because we're taking random samples (so the initial organization is arbitrary). Once organized, we can take the column-wise means for plotting. Let's have a look:
+
+```{r}
+reps <- 1000
+n <- 75
+pop <- -50:150
+set.seed(200)
+xMat <- matrix(sample(pop,reps*n,T),nrow=75)
+samplingDist <- apply(xMat,2,mean) # I am applying a function to the 2nd dimension (columns) of the matrix
+length(samplingDist) # make sure I have the expected number of means (= to reps above)
+```
+
+OK, now let's add the density curve for the sampling distribution of the mean for n=75 to the histogram of our single sample. Markdown environments will hang on to dataframes and named objects and so on, but the code is interpreted sequentially, so if we try to add lines to an existing plot, that plot must have been rendered in the same code chunk. Let's recall it here.
+
+```{r}
+hist(x,main="Random sample with replacement of \n 75 numbers between -50:150",freq=F,cex=0.5)
+lines(density(x))
+lines(density(samplingDist))
+```
+
+#####Question 3
+a. What happened to the top of the curve for the sampling distribution of the mean?
+  - The y-axis is set by the first plot so the normal distribution is off the scale of that y-axis
+b. Yes, it was truncated. Bravo. Now, reason from what you know about the properties of probability distriubtions to explain why it was truncated.
+  - Sampling 1000 times appraoches the normal distribution while one sample of 75 with replacement will not explore the space enough for a normal distribution. 
+
+***
+
+To fix the truncation problem, we just need to specify the plotting parameters in a slightly differnet order.
+```{r}
+plot(density(samplingDist), xlim=c(min(pop),max(pop)),main="sample distribution (red) and \n sampling distribution for the mean")
+lines(density(x), col="red")
+```
+
+#####Question 4
+a. Why is the sampling distribution of the mean narrower and taller than the distribution for a single sample of n=75? Will this same relationship always hold between the two kinds of ditributions? Explain.
+  - The average of each sample will be around the middle so the distribution of a sample of means will be near the mean value. 
+b. Why is the sampling distriubtion for the mean more bell-shaped than the data distriubtion?
+c. Do you think a sampling distriubtion for the mean using n=15 observations will be wider or narrower than the sampling distribution plotted here (based on n=75)? Explain. (Hint: it's OK to add that one to the same plot to help your explaination!!)
