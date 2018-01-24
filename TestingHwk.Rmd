@@ -2,7 +2,9 @@
 title: "BDA_hw1"
 author: "Michelle DePrenger-Levin"
 date: "January 17, 2018"
-output: pdf_document
+output:
+  html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -10,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-install.packages("swirl")
+#install.packages("swirl")
 library(swirl)
 swirl()
 ```
@@ -52,52 +54,4 @@ x<-seq(86,96,length=1000)
 plot(x,dnorm(x,mean=86, sd=samplesd2))
 points(x, dnorm(x, mean=19, sd=samplesd2),col="red")
 ```
-
-
-#1/22/2018    
-```{r}
-library(RCurl)
-library(devtools)
-install_github("genomicsclass/dagdata")
-dir<- system.file(package = "dagdata")
-
-dat <- read.csv(text=getURL("https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/femaleMiceWeights.csv"))
-
-head(dat)
-#blarg, dplyr
-library(dplyr)
-chow <- filter(dat, Diet=="chow")
-#or
-dat[dat$Diet=="chow",]
-
-chowVals <- select(chow, Bodyweight) #Still a column in data frame
-#or
-dat[dat$Diet=="chow","Bodyweight"] #a vecor
-
-#Mammalian sleep
-msleep <- read.csv(text=getURL("https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/msleep_ggplot2.csv"))
-
-#1.
-class(msleep) #data.frame
-head(msleep)
-table(msleep$order)
-#2.
-nrow(msleep[msleep$order=="Primates",]) #12
-#dplyr way...
-nprimates <- filter(msleep,order=="Primates") %>% nrow
-#3.
-filter(msleep,order=="Primates") %>% class #data.frame
-#4.
-filter(msleep,order=="Primates") %>% select(.,"sleep_total") %>% sum #126
-sum(msleep$sleep_total[msleep$order=="Primates"]) #126
-#5.
-filter(msleep,order=="Primates") %>% select(.,"sleep_total") %>% unlist %>% mean #10.5
-mean(msleep$sleep_total[msleep$order=="Primates"]) #10.5
-#6.
-filter(msleep,order=="Primates") %>% summarize(mean= mean(sleep_total))
-
-
-```
-
-
 
