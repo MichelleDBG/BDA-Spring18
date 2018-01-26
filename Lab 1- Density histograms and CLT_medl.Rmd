@@ -28,7 +28,7 @@ hist(x1,main="random sample with replacement of 15 numbers between -50:150")
 a. What is the scale for the random variable x that we just created? 
     - This random variable is in the interval scale (-50 to 150).     
 b. What is the distriubtion for the random variable x? Hint: look at the code that generated the distribution and think about probabilites of sampling across the domain.
-    - The mean of random variable x should be a normal distribution around 50. There is an equal probability of sampling across the domain of -50 to 150.       
+    - The mean of random variable x should be a normal distribution around 50. There is an equal probability of sampling across the domain of -50 to 150. The data distribution is uniform.      
 c. Why does the observed distribution look different than what you might expect for the distribution you named in b?
     - The observed distribution comprise the samples taken, not the mean of the values sampled. The samples will be somewhat flattly distributed within the sample space.      
 
@@ -107,11 +107,14 @@ xMat <- lapply(n, function(x){
 })
 samplingDist <- lapply(xMat, function(xMatnow) apply(xMatnow,2,mean)) 
 
+palette <- colorRampPalette(colors=c("yellow", "blue"))
+cols <- palette(length(n))
+
 plot(density(samplingDist[[1]]), xlim=c(min(pop),max(pop)),ylim=c(0,.25),
-     main="sample distributions for sample sizes 100 to 1000 (red) and \n sampling distribution for the mean (black)")
+     main="sample distributions for sample sizes 100 to 1000 (yellow to blue) and \n sampling distribution for the mean (black)")
 for(i in 1:length(n)){
-  lines(density(samplingDist[[i]]), xlim=c(min(pop), max(pop)))
-  lines(density(xMat[[i]]), col="red")
+  lines(density(samplingDist[[i]]), xlim=c(min(pop), max(pop)), col=cols[i])
+  lines(density(xMat[[i]]))
   }
 
 ```
