@@ -85,7 +85,7 @@ for (n in 2:samp) { # iterate through a range of sample sizes
     p[r]<-t.test(pop1,pop2)$p.value # do the t-test and harvest the p-values
     }
   t1[n-1]<-mean(p<0.05) # harvest the type I error rate for experiments of size n
-} # note the indexing trick above - why did we start with n=2?
+} # note the indexing trick above - why did we start with n=2? - To have an average of two, not a sample of 1, can't run a t-test on a sample of 1.  
 
 # now plot the distribution of type 1 error
 plot(2:samp,t1,xlab="sample size (n)",ylab="type I error rate")
@@ -95,7 +95,31 @@ abline(h=0.05,col="red")
 
 #####Question 2
 a. What does this plot suggest about the rule of thumb that n should be ~20-30 for reliable results? Be specific in your response.
-b. Add a new code chunk and adjust the code above to generate a comparable plot showing how type I errors change as a function of precision in the random process (i.e. walk across a range of values for sigma)
+  - The type I error rate is around the p-value cutoff of 0.05 over a fairly uniform distribution (domain) of sample sizes. This error rate does not improve at or beyond 20-30 sample size range. There is no evidence that 20-30 samples are any better than 10-20 samples. 
+b. Add a new code chunk and adjust the code above to generate a comparable plot showing how type I errors change as a function of precision in the random process (i.e. walk across a range of values for sigma)  
+
+```{r, add precision}
+p<-NULL
+t1<-NULL
+mu<-25
+sig<-3
+reps<-2000
+samp<-50
+set.seed(100)
+for (n in seq(0.0001,5.0001,0.5)) { # iterate through a range of sigma
+  for (r in 1:reps) { # do the experiment "reps" times for each sample size
+    pop1<-rnorm(samp,mu,n) # take 50 samples from "pop1"
+    pop2<-rnorm(samp,mu,n) # take 50 samples from "pop2", the exact same distribution
+    p[r]<-t.test(pop1,pop2)$p.value # do the t-test and harvest the p-values
+    }
+  t1[n]<-mean(p<0.05) # harvest the type I error rate for experiments of size n
+} # note the indexing trick above - why did we start with n=2? - To have an average of two, not a sample of 1, can't run a t-test on a sample of 1.  
+
+# now plot the distribution of type 1 error
+plot(1:length(seq(0.0001,5.0001,0.5)),t1,xlab="standard deviation (n)",ylab="type I error rate")
+# add line to indicate the expected rate (0.05)
+abline(h=0.05,col="red")
+```
 c. What does this new plot say about how type I error rates are impacted by precision? Explain.
 
 ****
