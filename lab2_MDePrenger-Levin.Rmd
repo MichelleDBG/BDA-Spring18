@@ -1,0 +1,134 @@
+---
+title: "Lab 2 - classic parametric inference"
+output:
+  html_document: default
+  html_notebook: default
+  pdf_document:
+    fig_caption: yes
+    fig_height: 4
+    fig_width: 5
+---
+
+###*WTF is a null hypothesis test?*
+
+####Decision Spaces
+The standard frequentist interpretation of a p-value resulting from a t-test is deceptively complex. Your book does a good job of describing misconcpetions. The p-value is *not* the probability of the null hypothesis being true. It is *not* the probability of the alternative hypothesis being false. It is *not* the probability of random chance generating the data. It *is* the probability of random chance alone generating data as or more inconsistent with the conditions described by the assumed (stated) null hypothesis, *if and only if* that null hypothesis is true. It's a probability about data (*NOT* about hypotheses), but it only applies if the conditions of the null hypothesis are true (which is almost always known *a priori* to be false). The first excercise in our demo is to simulate just those conditions (i.e. we can force $H_0$ to be true) to see what the distribution of p-values would be *if* the null hypothesis *were in fact true*. Since we never can know whether it is true when we collect data, let's simulate the situation...
+
+```{r}
+# declare the values for some parameters that we'll use in our MC simulation
+reps<-5000 # number of experiments to run
+n<-20 # sample size for each treatment in our experiment
+mu<-25 # population average for each treatment
+sig<-3 # population standard deviation for each treatment
+p<-NULL # declare a null vector to collect the p-vals
+set.seed(100)
+# now set up a loop for pedagogical clarity
+for (i in 1:reps) {
+  trt1<-rnorm(n,mu,sig) # take n samples from "trt1"
+  trt2<-rnorm(n,mu,sig) # take n samples from "trt2", but use same distribution
+  # i.e. parameters are identical for both sample distributions
+  # that means the data were from the same exact random process
+  # so mu1 = mu2 is true for our simulated data
+  p[i]<-t.test(trt1,trt2)$p.value # do the t-test and harvest the p-values
+}
+hist(p) # plot the distribution of p-values
+mean(p<0.05) # find the type I error for our experiments; every TRUE becomes 1, FASLE is 0, then the mean, so proportion of values with p-value less than 0.05;0.0546 of the time
+
+```
+
+#####Question 1
+a. Does the shape of the histogram for p-values under the null hypothesis surprise you? Explain.
+  - The p-values, the chance of producing data different than the stated mean and standard deviation used to create the data, should produce a very similar p-value each time so a uniform distribution of p-values is expected.   
+b. Use the shape of the distribution to explain the observed type I error rate (0.05).
+  - Type I error rate, rejecting the NULL when it is true (the two samples were taken from the same distribution), will be expected to happen a small proportion of the time (0.05).
+c. Write a short paragraph explaining why the distribution of p is uniform when $H_0$ is true. To help with this, try copy-and-pasting the code chunk into your response. Edit the code so that the experimental design does *not* meet the assumption that $H_0$ is true, and evaluate the resulting histogram of p-values.  
+```{r}
+# declare the values for some parameters to not be the same for two different samples
+reps<-5000 # number of experiments to run
+n<-20 # sample size for each treatment in our experiment
+mu<-25 # population average for each treatment
+sig<-3 # population standard deviation for each treatment
+p<-NULL # declare a null vector to collect the p-vals
+set.seed(100)
+# now set up a loop for pedagogical clarity
+for (i in 1:reps) {
+  trt1<-rnorm(n,mu,sig) # take n samples from "trt1"
+  trt2<-rnorm(n,mu+5,sig) # take n samples from "trt2", but use same distribution
+  # i.e. parameters are identical for both sample distributions
+  # that means the data were from the same exact random process
+  # so mu1 = mu2 is true for our simulated data
+  p[i]<-t.test(trt1,trt2)$p.value # do the t-test and harvest the p-values
+}
+hist(p) # plot the distribution of p-values
+mean(p<0.05) # find the type I error for our experiments; every TRUE becomes 1, FASLE is 0, then the mean, so proportion of values with p-value less than 0.05; We reject the null 0.9996 of the time
+mean(p>0.05) # Type II error, accept null when they are different only 0.0004 of the time. 
+
+```
+  - When the mean is different between the two samples, the p-value is well below 0.05 nearly all the time. 
+
+****
+
+Does the Type I error depend on sample size? We can set up a simulation to look for the effect of sample size on the type I error rate as compared to theoretical type I error rates. The following code runs a loop within a loop. Computationally, this is very inefficient, but here it's used to (hopefully) more clearly illustrate that we are simulating lots of tests for each of many different sample sizes. Each time through, we compute the number of type I mistakes that are made when we use the p<0.05 decision criterion.
+
+```{r}
+p<-NULL
+t1<-NULL
+mu<-25
+sig<-3
+reps<-2000
+samp<-50
+set.seed(100)
+for (n in 2:samp) { # iterate through a range of sample sizes
+  for (r in 1:reps) { # do the experiment "reps" times for each sample size
+    pop1<-rnorm(n,mu,sig) # take n samples from "pop1"
+    pop2<-rnorm(n,mu,sig) # take n samples from "pop2", the exact same distribution
+    p[r]<-t.test(pop1,pop2)$p.value # do the t-test and harvest the p-values
+    }
+  t1[n-1]<-mean(p<0.05) # harvest the type I error rate for experiments of size n
+} # note the indexing trick above - why did we start with n=2?
+
+# now plot the distribution of type 1 error
+plot(2:samp,t1,xlab="sample size (n)",ylab="type I error rate")
+# add line to indicate the expected rate (0.05)
+abline(h=0.05,col="red")
+```
+
+#####Question 2
+a. What does this plot suggest about the rule of thumb that n should be ~20-30 for reliable results? Be specific in your response.
+b. Add a new code chunk and adjust the code above to generate a comparable plot showing how type I errors change as a function of precision in the random process (i.e. walk across a range of values for sigma)
+c. What does this new plot say about how type I error rates are impacted by precision? Explain.
+
+****
+
+####T-test in action
+Let's take a look at some simpler code for t-tests than what's presented in the text (section 2.14). To do this, we need to load the mice weight data frame using read.csv(). Make sure you have a locally stored copy of that file on your machine and in your working directory.
+
+```{r}
+mice<-read.csv("P:/My Documents/BDA_Spring2018/femaleMiceWeights.csv") # point this to your file
+# see what variables are in the dataframe
+names(mice)
+# Diet is the treatment (explanatory variable) and Bodyweight is the response variable
+t.test(mice$Bodyweight~mice$Diet)
+# above code is shorthand for separating subsets of data by a factor variable
+# in English: "variation in Bodyweight can be explained by variation in Diet"
+# take the time to understand all of the output
+# especially the effect size and associated confidence interval... 
+```
+
+#####Question 3
+a. Report the difference in means (point estimate for effect size) and the 95% CI for that difference
+b. Write a sentence to interpret the 95% CI on the difference
+c. Report the value of the test statistic, the t-distribution parameter (df) and p-value
+d. Write a sentence to interpret the p-value
+e. Which gives more information (estimated difference and 95% CI or the value of t and p)? Explain.
+
+****
+
+####T-test in theory
+
+Perhaps the most important limitation of using p-values derives from using them for inference when a research team conducts just a single replicate of an experiment. Watch the following eye-opening video in advance of responding to the next question: https://www.youtube.com/watch?v=ez4DgdurRPg&t=10s
+
+
+#####Question 4
+a. Most undergraduate education in the sciences encourages students to explain research results by reasoning from "facts" covered in lecture or lab. Although very interesting and creative, such post-hoc story-telling excercises may be leading future researchers down a potentially futile path. One consequence is that instructors (or PIs) become conditioned to ask for an experiment/study to re-done "correctly" when the result doesn't match the expectation. Based on what you saw in the video, how might you now respond to a professor or advisor who asks for a do-over because the results seemed incorrect?
+b. Describe ways that you might extend a lab excercise you've done (personally) so that the primary point of the video can be illustrated for students.
