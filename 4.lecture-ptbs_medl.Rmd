@@ -1,0 +1,107 @@
+---
+title: "Lecture Notes"
+output:
+  pdf_document:
+    fig_caption: yes
+    fig_height: 4
+    fig_width: 5
+  html_notebook: default
+  html_document: default
+---
+
+This is my mantel test results, if geography didn't matter - permutations of 999 then saw that the actual correlation of genetics and geographic distance, that is aP value, where the line falls on the distribution, can report and discuss how different... 
+
+##Permutation Tests
+
+Turns out it's not necessary to assume any particular parametric distribution for a test statistic in order to answer the question: What's the probability that my result might have happened even without any real effect of the explanatory variable? If that explanatory variable is quantified on the nominal scale (or even if it isn't), it's fairly simple to just shuffle the values and see what would have happend when we measure the difference between groups. We can repeat this shuffling many times to generate a distribution of randomized results. We call this process a permutation test because we permute the values for the explanatory variable. Let's take a look using the data in the text (section 2.22), but we will use more streamlined R code...
+
+```{r}
+dat <- read.csv("../dals_data/femaleMiceWeights.csv")
+# we'll skip the partitioning of the data because the variable "Diet" already does that for us
+# to see this, let's collect the observed mean bodyweights for the two diets:
+tapply(dat$Bodyweight,dat$Diet,mean) #table apply, do over a table you make
+
+# compute the observed difference and hang on to it
+obs.diff <- diff(tapply(dat$Bodyweight,dat$Diet,mean))
+obs.diff
+
+# now randomize the treatment values (shuffle the diets)
+dat$rand <- sample(dat$Diet)
+
+# see what happened (compare the diet and rand fields):
+dat
+
+# good. shuffled. Now that we know how to randomize, do that many times
+# compute difference between mean bodyweights for each diet randomization
+reps <- 5000
+rand.diff <- NULL
+set.seed(100)
+for ( i in 1:reps) {
+  rindx <- sample(dat$Diet)
+  rand.diff[i] <- diff(tapply(dat$Bodyweight,rindx,mean))
+}
+
+# look at the randomized distribution of differences (i.e "null")
+# and identify location of observed mean
+hist(rand.diff,main="Randomized distribution",xlab="difference between means")
+abline(v=obs.diff, col="red", lwd=2)
+```
+
+OK. See the similarity between this and the parametric t-test? We just need to figure out the probability of getting a difference as large or larger (in absolute value) from the distribution of randomized differences (i.e. under the null).
+
+```{r}
+mean(abs(rand.diff)>abs(obs.diff))
+```
+
+Uh oh. How should we interpret that? Is it significant? Hint: trick question - we should *never* ask if a result is "significant". Instead, we should report the probability of getting a result as or more inconsistent with the hypothesized distribution. Try it again... Doesn't that feel better. No more fretting about the proximity to 0.05.
+
+***
+
+##Bootstrapping
+
+```{r}
+factorial(5)
+weight <- rnorm(22,20,4)
+dat <- data.frame(weight, Diet=rep("chow","hf",11))
+
+reps <- 300
+for(i in 1:reps){
+  idx <- sample()
+}
+
+
+
+n<-22
+idx <- sample(1:n,n*reps,TRUE) #with replacement
+idx.matrix <- matrix(idx,n,reps,TRUE) #not by row, fill by column 
+head(idx.matrix)
+```
+
+Bootstrapping is named for the old saying that describes how a cowboy pulls himself out of a pit of quicksand by tuggin on his own bootstraps; it's a seemingly improbable solution. Most students struggle with the idea that we can learn from our collected data alone. Models? We don't need no stinking models... 
+
+Bootstrapping is really similar to randomization in that we shuffle the data we collect to make inference to future samples/experiments. Whereas randomization tests are used to conduct hypothesis tests, bootstrapping is used for constructing confidence intervals. Let's take a look at how we can use bootstrappign to find the non-parametric (non-model-dependent) 95% confidence interval around the observed difference. After all, we want to report eh effect size and the uncertainty about our estimate of that effect size based on our data. We can't just report the p-value we computed above...
+
+The idea is to resample from our data *with replacement* many times. Each new sample is the same size as the original, but some of the original values may appear more than once. This process differs from the randomization test in that we do not shuffle the values of the explanatory variable. We keep the measures for all of the variables connected for each resampled sample unit. Then, for each new sample, we compute the observed difference in mean body weight for the two diets. The collection of these differnces is the bootstrapped sampling distribution for the difference in means. We use this distriubtion to locate the quantiles for the X% CI. So if we want the 95% CI, for example, we find the values associated with the 0.025 and 0.975 quantiles. Those values bookend the central 95% of the sampling distribution density and so represent the 95% "confidence"" interval for the difference in means.
+
+Notice that we don't have to calculate the variance for difference in means for either the randomization test or the bootstrapped CI. Again, that's because the variance is a parameter for the normal model, and we are not assuming any specific model for our sampling distributions here. It's a really useful and flexible approach, but it might take a while for you to see it because the concept doesn't sink in quickly. Play around with the code. Make sure you understand what each command does and think about what it represents biologically. It's cool stuff. You'll see.
+
+```{r}
+reps <- 5000
+boot.diff <- NULL
+n <- nrow(dat)
+set.seed(100)
+for ( i in 1:reps) {
+  idx <- sample(1:n,n,T)
+  boot.diff[i] <- diff(tapply(dat$Bodyweight[idx],dat$Diet[idx],mean))
+}
+
+# find the quantiles
+boot.95hdi<-quantile(boot.diff,p=c(0.025,0.975))
+boot.95hdi
+
+# look at the bootstrapped samplign distriubtion, identify CI limits
+hist(boot.diff,main="Bootstrap sampling distribution",xlab="difference between means")
+abline(v=boot.95hdi, col="red", lwd=2)
+mtext(round(boot.95hdi,2),at=boot.95hdi,font=4)
+```
+

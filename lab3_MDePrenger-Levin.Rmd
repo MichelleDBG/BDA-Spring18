@@ -1,0 +1,119 @@
+---
+title: "Lab 3 - simulation-based inference"
+output:
+  pdf_document:
+    fig_caption: yes
+    fig_height: 5
+    fig_width: 6
+  html_notebook: default
+  html_document: default
+---
+
+####*We don't need no stinking t-tables...*
+
+Monte Carlo simulation methods are really useful for generating sampling distributions for cases where we don't know what the sampling distribution will be in the limit - that is, for when we can't write a distribution function in closed form. This lab will explore a number of ways to use simulation for inference in data analysis.
+
+****
+
+#####Randomization tests
+
+One version of a randomization test uses simulation to repeatedly "shuffle" the values for a nominally-scaled explanatory variable and then calculate the statistic of interest as though the shuffled values were correct. In this way, it generates the sampling distribution for your test statistic when the true distribution of the nominal variable is random. In effect, it generates a non-parametric null distribution. Given a specific data set, it's always possible to compute all possible values of the statistic under all possible permutations of the labels for the nominal variable; for this reason, you might also see this procedure called a *permutation test*. Fisher's exact test does this when you have two nominally-scaled variables. This lab is designed to teach simulation principles, so we will illustrate the simulation version of the randomization test for a measurement response variable. This version is also very flexible in terms of the summary statistic that you want to characterize with a randomized sampling distribution - no need to compare means...
+
+Let's use some qPCR data for this example. The design is simple: treatment is a factor of interest, which has two levels on the nominal scale (treatment, control), and gene is the other. We have two genes, one for which we want to quantify expression, and the other a "housekeeping" gene that we use to normalize the expression levels for the gene of interest. The response variable of interest is $\Delta C_t$, which is the difference in expression (estimated as # of PCR cycles for which the measured fluorescence exceed a specified threshold) between the target and housekeeping genes. The data we'll use are from 12 observations of the treatment and 12 observations of the control. Each observation involved measures for both the target and housekeeping gene, so that we end up with a total of 24 measures of $\Delta C_t$. Yuan et al. (2006 BMC Bioinfomatics 7:85) recommend using a t-test to test for differences between the mean $\Delta C_t$ for the control and treatment groups. We'll revisit these data later because the designs usually involve small numbers of replicates and often there are both technical and true (biological) replicates, which will give us some texture later when we discuss pseudoreplication. For now, let's compare the outcomes for a t-test and a randomization test for difference in means.
+
+```{r}
+# load the data
+qpcr <- data.frame(trt = c(rep("control",12),rep("treatment",12)),
+                  dct = c(3.3687,3.4063,3.5066,4.5963,3.7704,3.4906,3.3016,3.7572,3.3607,
+                          3.5453,3.6461,3.9351,3.3345,2.9337,3.3349,2.5397,2.6615,2.8767,
+                          3.1472,3.2965,2.7206,3.0662,2.7814,2.7741))
+# look at the data
+library(sm)
+sm.density.compare(qpcr$dct,qpcr$trt,xlab=expression(paste(Delta,C[t])))
+legend(4.2,1.4,levels(qpcr$trt),lty=c(1,2),col=c("red","green"))
+
+# do a 2-sample t-test
+t.test(qpcr$dct~qpcr$trt)
+
+# do a randomization test for difference in means
+obs.diff <- diff(tapply(qpcr$dct,qpcr$trt,mean))
+reps <- 10000
+rand.diff <- NULL
+set.seed(30)
+for (i in 1:reps) {
+  rindx <- sample(qpcr$trt)
+  rand.diff[i] <- diff(tapply(qpcr$dct,rindx,mean))
+}
+hist(rand.diff,main="randomized sampling distribution",
+     xlab=expression(paste("Difference in mean ",Delta,C[t]," (treatment - control)")))
+points(obs.diff,0,cex=2.5,pch=16)
+text(obs.diff,200,"observed",cex = 0.5)
+pval <- mean(abs(rand.diff)>abs(obs.diff))
+pval
+```
+
+
+#####Question 1
+a. Does the shape of the density curves justify the use of means as a summary statistic? Explain.
+b. N=12 for each of the two treatments. Is that sample size large enough to do a t-test? Explain.
+c. Evaluate the assumptions for each test and describe the extent to which they are met.
+d. Write some code to carry out a permutation test for the difference in values of a more appropriate summary statistic (given the desitributions of $\Delta C_t$ for the treatment and control)
+d. Write a "results" section based on your answers and the most appropriate R output. Justify your reporting decisions.
+
+****
+
+#####Nonparametric bootstrap for estimation
+
+Let's continue with the qpcr data from above. Often, qpcr results are given in terms of the fold change in expression for two levels of the treatment variable. For example, we might want to quantify the x-fold decrease in expression for the control vs treatment conditions. To compute this, we first need the difference in the $\Delta C_t$ for the control and treatment. Let's compute $\Delta\Delta C_t$ as the difference in median $\Delta C_t$ for the control and treatment (usually people take the differnce in the $\Delta C_t$ averages, not the medians. But that's only by convention, so we'll illustrate the flexibility of simulation-based inference.
+
+The measures for QPCR are in log base 2, so to find the expression fold change, we compute $2^{\Delta\Delta C_t}$. The standard method for doing this uses but a single number for a set of experiments. This discards/ignores observed variance. Let's look at a way to use simulation to create a sampling distribution for the expression fold change. I will write the code for generating one such resampled expression fold value. Your task is to complete the code to generate the sampling distribution for that statistic and then report the result. Remember that in this you are not randomizing the treatments, so when you call the sample() function, you want to preserve the trt-dct dependencies (i.e. sample by rows). Don't worry about constraining your resamples to be balanced. We want to characterize the full range of variance. Warning: you might get all "control" values for some bootstrap resamples, which will prevent you from computing the fold change - don't worry about that. Just take another sample.
+
+```{r}
+# just the basic function to compute expression fold change
+exfc <- 2^diff(tapply(qpcr$dct,qpcr$trt,median))
+exfc
+# we want bootstrapped samples of the same size
+# so find n and resample from 1:n to get new indexes
+n <- nrow(qpcr)
+indx <- sample(1:n,n,T)
+# put the new sample in an object called boot so you can see it
+boot <- qpcr[indx,]
+tail(boot)
+# notice the rownames become decimals to indicate duplicate samples
+# compute exfc for the bootstrap sample
+exfc.boot <- 2^diff(tapply(boot$dct,boot$trt,median))
+exfc.boot
+
+# OK. You should be ready to roll now.
+# Just need to generate the bootstrapped sampling distribution...
+# Some code to get you started in that direction
+reps <- 5000
+set.seed(3023)
+boot.exfc <- NULL
+
+```
+
+
+#####Question 2
+a. Write a sentence that you might put in a results section to describe the expression fold change estimate (the effect size) and the uncertainty in that estimate (hint: use the quantiles of the sampling ditribution you created). Feel free to also show the sampling distribution if you like. Just be sure to explain it if you do.
+
+
+****
+
+#####Reporting summary stats and precision
+
+The final example is for a dataset of stable carbon isotope values ($\delta^{13}C$) measured in insect chitin. Isotope values are reported as deviations (in part per thousand) from a known standard, and so use the delta notation. In the case of carbon, most organic material has less of the heavy isotope than the interational standard (pee dee belemnite), so the values are negative.
+
+Insects were collected from the prairies in C4 grassland and C3 cropland habitats. $\delta^{13}C$ values in plants varies according to differences in water use efficiency; C3 plant $\delta^{13}C$ values tend to be more negative than those for C4 plants. This is because C4 plants respire less than C3 pants, so carbon metabolism in C4 recycles more of the heavy isotope $^{13}C$ than in C3 plants. You want to report something like the average of the isotope values at your study site so that you can compare it to previously published carbon isotope values from other sites.
+
+So the goal is to decide how best to summarize your data in a publication. The code chunk below reads in the data and shows the histogram. The data file "carbon.csv" is posted on canvas. Your task is to write additional code to help you summarize the distribution. You must use the data to calculate summary statistics and/or for parametric simulation or bootstrapping to produce confidence intervals.
+
+```{r}
+samp <- read.csv("carbon.csv")
+hist(samp$d13C, main="Sample distribution", xlab = expression(paste(delta^13,"C")))
+
+```
+
+#####Question 3
+a. What summary statistic(s) would you use to describe the distribution here? Justify your choices.
+b. Can you use simulation-based methods to generate a sampling distribution for your summary statistic?

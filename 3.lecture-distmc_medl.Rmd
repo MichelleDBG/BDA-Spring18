@@ -1,0 +1,106 @@
+---
+title: "Lecture Notes"
+output:
+  pdf_document:
+    fig_caption: yes
+    fig_height: 4
+    fig_width: 5
+  html_notebook: default
+  html_document: default
+---
+
+####*Inductive inference is purposely imperfect*
+
+I cnduo't bvleiee taht I culod aulaclty uesdtannrd waht I was rdnaieg. Unisg the icndeblire pweor of the hmuan mnid, aocdcrnig to rseecrah at Cmabrigde Uinervtisy, it dseno't mttaer in waht oderr the lterets in a wrod are, the olny irpoamtnt tihng is taht the frsit and lsat ltteer be in the rhgit pclae. The rset can be a taotl mses and you can sitll raed it whoutit a pboerlm. Tihs is bucseae the huamn mnid deos not raed ervey ltteer by istlef, but the wrod as a wlohe. Aaznmig, huh? Yaeh and I awlyas tghhuot slelinpg was ipmorantt! See if yuor fdreins can raed tihs too.
+
+***
+
+##Distributions
+
+These notes are to reinforce understanding of distributions. Distributions are at the center of data analysis. They're actually at the center of scientific practice as well, but for whatever reaason, science is usually taught as though it's an exacting process. It's not. No two experiments will ever have the exact same outcome. Very, very close, sure. But never exact. If you did get the exact same result, then you aren't studying life. You are studying manufacturing. Or engineering.
+
+This implies that results from scientific experiments are better thought of in terms of distributions; there exists a set of results, rather than a single correct result. Many distributions used in data analysis have known functional forms that are governed by parameters. Let's use R to look at one of the most commonly encountered parameteric (governed by parameters) distributions, the normal distribution.
+
+Note that R actually includes built-in functions for many commonly encourntered distributions, mostly in the exponential family. To see a more complete list, type help("distributions"). In general, there are 4 useful functions for interacting with each parametric distribution in R.
+
+1. dxxx probability density/mass function, returns height at x
+2. pxxx cumulative probability function, returns Pr(X<x)
+3. qxxx quantile function, returns x for given quantile
+4. rxxx random variabel generator, returns random x weighted by pdf
+
+These functions are helpful for Monte Carlo simulation, as described in your text. MC simulation is incredibly flexible and can be used for many data analytic problems, including hypothesis tests (other then null), estimation, and scenario forecasting (prediction).
+
+For these notes, however, we are going to use these built-in functions to reinforce some basic properties of distributions that often elude students. For example, there is no such thing as "THE" normal distribution. There are actually an infinte number of normal distributions, each one varying with the values of the two parameters $\mu$ and $\sigma^2$. For example, normally distributed processes can have the same mean, but can manifest as differentially variable. That is, suppose the mean tumor size is cut in half ($\mu = 0.5$) after treatment for experiments in mice, rats, and human clinical trials, but the process is least variable in the mouse study, intermediately vairable in the rats study, and most variable in the human clinical trial ($\sigma^2_m < \sigma^2_r < \sigma^2_h$). Although each process is normally distributed, each has it's own unique distribution. Let's take a look. 
+
+```{r}
+# declare parameter values
+mu <- 0.5
+sig.m <- 0.1
+sig.r <- 0.2
+sig.h <- 0.4
+reps <- 10000
+
+# generate random numbers to simulate large sampels from distribution
+mouse <- rnorm(reps,mu,sig.m)
+rat <- rnorm(reps,mu,sig.r)
+human <- rnorm(reps,mu,sig.h)
+
+# now plot them all on the same figure
+xlims <- c(-1,2)
+plot(density(mouse), xlab = "proportional change in size",
+     main = "3 normals", xlim = xlims)
+lines(density(rat), lty=2, col = "red")
+lines(density(human), lty=3, col = "blue")
+legend("topright", legend = c("mouse","rat","human"),
+       lty = 1:3, col = c("black","red","blue"))
+```
+
+Key thing to note is that these are *different* distributions. You can have fun as a biologist making up stories about why they are different. But I think perhaps a better skill to develop is to how to use this information. For example, what is the probability of tumor growth (not reduction) for each of the model organisms? To address this, we need to first frame the problem correctly. Should we ask a question about whether there is no effect (i.e. carry out a null hypotheses)? Many researchers would actually try to do this, and many professors I know would encourage their students to set it up this way... But why do that when you can work with the distribution directly? My answer: Because they were taught that the scientific method goes like this:
+
+1. write the hypothesis
+2. make it falsifiable
+3. gather data
+4. enter data into statistical software
+5. look at p
+
+That's of course silly for so many reasons, not the least of which being that all NHST questions are about the mean response. We don't care about the mean response, perhaps because we want to tell a cancer patient about the real chances for an *individual* to experience tumor growth, even when under treatment that is known to reduce growth *on average*. Or maybe you are a PI running the basic experiemtn with rats, and you want to know how to interpret the result that one of the rats experienced tumor growth. Did your technician screw up? Did you use the wrong rat? Should you toss out the data point because it doesn't match your expectation? It's really irresponsible to answer any of these questions without first quantifying the probability of that seemingly contrary observation.
+
+In other words, we just want to quantify the *probability that a single future observation* will experience tumor growth under an effective treatment. Let's use our simulated clinical trial data and the normal model to do this. 
+
+First, we need to think in order to frame the problem correctly - no mindless stats here. We want to solve for the probability that x (proportional change in tumor size) represents growth rather than shrinkage. That happens whenever x > 1. This implies that we want Pr(X > 1) from our parameterized distributions, so we need to first choose the  function in R that gives us this kind of information: pnorm(). Next, look at the help file for pnorm to identify the arguments we will need. Looks liek we need the valeu for x and the parameter values that are associated with the appropriate experiment. We need to find the value associated with the right (upper) tail of the distribution - we want Pr(X > 1), not Pr(X <1) - so we will want to toggel the default for lower.tail.
+
+```{r}
+# first, for the mouse experiment results
+pnorm(1, mu,sig.m,lower.tail = F)
+
+# now for the rats
+pnorm(1, mu,sig.r,lower.tail = F)
+
+# finally for the humans
+pnorm(1, mu,sig.h,lower.tail = F)
+```
+
+How do you interpert these results? This pattern of change in probability (because fo changing distributions) is very common as we go from basic biology experiments out to applied clinical trials or management strategies. Think about why that's true. What changes when we move from highly controlled conditions that are meant to identify mechanisms in isolation to totally natural conditions where interactions with other processes are the norm, rather than the exception.
+
+Let's do another problem using a different distribution "at the board" in class today.
+
+
+# Examples    
+20 minutes - how many successful mating attempts    
+[0,$\Inf$) <-- is this true? Is this interval? descete numbers    
+1. What's the probability that flies mate under X vs. Y   
+```{r}
+rpois(20,2)  # When close to 0 can't go past it, so allowing larger number for average lets sigma be bigger - as mean gets larger, so too does the variance (here one number, lambda)
+
+hist(rpois(20,2))
+#Poisson is of the Gaussian family so when events is large, goes normal
+hist(rpois(20000,200))
+
+#How does the probability
+#Find what is the value that is really rare to find, what's a threshold for the rare event, here maybe over 5 fly sex
+qpois(0.95,2) #0.13; when 2 is mean, the 
+ppois(20,2,FALSE) #not likely to get more than that number, 20
+ppois(20,2,TRUE) #area under curve from 0 to 20, everything falls under here
+
+```
+

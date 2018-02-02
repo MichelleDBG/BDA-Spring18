@@ -1,0 +1,204 @@
+---
+title: "Probability and Likelihood"
+author:
+date: "January 28, 2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+###Probability
+Let's use the example from Chapter 4.2.3 of Williams et al. We radio-tag N=100 mule deer, and find k=90 of them alive after 3 months of winter. This is clearly a binomial process (the joint distribution for 100 Bernoulli trials), and we should recall from basic stats that we can compute the probability of our outcome using the binomial distribution. Notice that we use the binomial distribution function to compute the probability of the data using the product rule. That is, we find the probability of this observation AND the next observation, AND the next, AND the next, etc. (i.e. a product of n probabilities, k of which occur with probability p, and N-k of which occur with probability 1-p). 
+
+To do this, however, we need to specify a value for p, the probability of survival (in this case). That is, we can compute $P(X|\Theta)$, the probability of our data, given a specific model (represented by $\Theta$. The problem is that there are a lot of different possible models because there are a lot of different binomial distriubtions. Like a whole lot of them. Every time we change N, k, or p, we get a new binomial distriubtion. For example, say we have 100 tagged deer. The the probability densities for various number of survivors depends on the value for p, the probability of survival.
+```{r}
+set.seed(300)
+reps <- 20000
+x <- c(0,100)
+N <- 100
+p <- 0.25
+y <- rbinom(reps,N,p)
+plot(density(y), xlim = x, main = paste0("N = ",N," and p = ",p),
+     xlab = "Number of survivors")
+p <- 0.5
+y <- rbinom(reps,N,p)
+plot(density(y), xlim = x, main = paste0("N = ",N," and p = ",p),
+     xlab = "Number of survivors")
+p <- 0.75
+y <- rbinom(reps,N,p)
+plot(density(y), xlim = x, main = paste0("N = ",N," and p = ",p),
+     xlab = "Number of survivors")
+
+```
+
+The distriubtions also change whenever the number of trials changes. Let's hold the survival probability constant at 0.75 and look at how the distribution changes with number of tagged deer in our sample:
+```{r}
+set.seed(300)
+reps <- 5000
+x <- c(0,100)
+N <- 10
+p <- 0.75
+y <- rbinom(reps,N,p)
+plot(density(y), xlim = x, main = paste0("N = ",N," and p = ",p),
+     xlab = "Number of survivors")
+N <- 50
+y <- rbinom(reps,N,p)
+plot(density(y), xlim = x, main = paste0("N = ",N," and p = ",p),
+     xlab = "Number of survivors")
+N <- 100
+y <- rbinom(reps,N,p)
+plot(density(y), xlim = x, main = paste0("N = ",N," and p = ",p),
+    xlab = "Number of survivors")
+
+```
+
+OK, so which one should we use? Well, that depends on our goal. We might want to test a hypothesis about survival rates. Let's say our colleagues in Wyoming claim that mule deer over-winter survival rate is 0.85 in the Southern Rockies. We can find $P(k=90|\Theta=0.80,N=100)$, where $\Theta = p$ is fixed:
+
+```{r}
+dbinom(90,100,0.85)
+```
+
+That's pretty small. Smaller than I would have guessed given that 90/100 is pretty close to 0.85, but notice that the density we computed is the case for *exactly* 90 of 100 survivors when p=0.85. Any specific outcome for a study with 100 different possible outcomes seems unlikely anyway. Looks like maybe we didn't frame the question quite well enough. Let's try again, but this time let's ask for the probability for getting 90 or more survivors if we assume that the survival rate is 0.85. In other words, let's compute $P(k\geq90|\Theta=0.80,N=100)$, where $\Theta = p$ is fixed.
+
+```{r}
+pbinom(90,100,0.85,lower.tail=F)
+```
+
+Well, what do you think? Are our Wyoming colleagues wrong? Usually we don't actually care about that. What we'd rather do is provide as good an estimate for the survival rate and say something about the precision of our estimate. In this case, our task is to pick the most likely binomial distribution, given our data. So we actually want to know something about how likely different values for p are, given that we saw 90 of 100 deer survive. We use likelihoods for this.
+
+###Likelihood
+
+In our example above, our best guess for over-winter survival, $\hat{p}$, is intuitively $\hat{p} = k/N = 0.9$, but let's study how to use likelihood functions to prove that.
+
+We also need to express some kind of uncertainty about how well we think we've estimated that value. We'll use likelihood functions for that as well.
+
+The expression for the binomial distribution is the likelihood in this case; it's the joint probability of N Bernoulli trials and is a combination of the product of the N outcomes and the number of ways in which we can arrange k survivors in a set of N sampled animals. We use log probabilities rather than products of probabilites for a likelihood because the product of probabilities get small quickly. Here's some code to see what log likelihood curves look like for an observed datset (N=100, k=90). The key thing to notice is that we've swapped the x-axis relative the plots for probability distributions. In the plots above, we were asking about the probability of a range of possible values for the number of surviving deer, given a fixed probability of survival. Here, we are asking about the likelihood (not a formal probability) of 90 of 100 deer survivng for a range of possible values for p; we're now looking at a function over our parameter of interest: $f(\Theta|N,k)$, where $\Theta = p$.
+
+```{r}
+## Initialize the sample
+n <- 100 # number of trials
+k <- 90 # number of occurrences
+
+## Because we're using likelihood now, we want to consider many values for p
+pvec<-seq(0.01,1,by=0.001)
+
+## Write the log likelihood function for a binomial process
+binom.loglik<-function(n,k,p){log(choose(n,k))+k*log(p)+(n-k)*log(1-p)}
+
+## compute and plot the values for p and associated log likelihood
+plot(pvec, binom.loglik(n,k,pvec), type="l",
+     xlab=expression(bolditalic(hat(p))), ylab="log likelihood")
+```
+
+Maximum likelihood theory then finds where the derivative of the log likelihood function equals 0 (i.e. the peak of the curve). We can find this (approximately) using our log.lik function to solve for every value in the p-vector, then finding the maximum of those results. If we've done this correctly, it should be for the value p=(x/n), which is the MLE for binomial. Let's draw a vertical line on the plot at that value for p.
+
+```{r}
+## find the vector index where loglik is max,and lookup that value in p-vector
+pStar <- pvec[which(binom.loglik(n,k,pvec)==max(binom.loglik(n,k,pvec)))]
+plot(pvec, binom.loglik(n,k,pvec), type="l",
+     xlab=expression(bolditalic(hat(p))), ylab="log likelihood")
+abline(v=pStar,col="red",lwd=2)
+mtext(pStar, 1, at=pStar, font=4) 
+```
+
+Looks good. Now let's try to find the uncertainty in our estimate using the profile likelihood. We should be able to backsolve int eh same way, but instead of solving for p at max(y), we will solve for the 2 values associated with where a horizontal line drawn $\chi^2_1(0.95)$ units below the maximum. Let's draw the horizontal lines for the maximum and the 95% interval.
+
+```{r}
+plot(pvec, binom.loglik(n,k,pvec), type="l",
+     xlab=expression(bolditalic(hat(p))), ylab="log likelihood")
+abline(h=max(binom.loglik(n,k,pvec)))
+abline(h=max(binom.loglik(n,k,pvec))-qchisq(0.95,1))
+```
+
+That's not very easy to see, so let's zoom the x and y axes into the area near the MLE
+
+```{r}
+xZoom <- c(max(0,pStar-0.25),min(1,pStar+0.25))
+yZoom <- c(c(-10,10)+max(binom.loglik(n,k,pvec))-qchisq(0.95,1))
+plot(pvec, binom.loglik(n,k,pvec), type="l",
+     xlab=expression(bolditalic(hat(p))), ylab="log likelihood",
+     xlim=xZoom,ylim=yZoom)
+abline(h=max(binom.loglik(n,k,pvec)))
+abline(h=max(binom.loglik(n,k,pvec))-qchisq(0.95,1))
+abline(v=pStar,col="red",lwd=2)
+```
+
+Now let's try to solve for p where the profile line intersects the likelihood curve
+```{r}
+offset <- binom.loglik(n,k,pStar)-qchisq(0.95,1)
+pvec[which(binom.loglik(n,k,pvec)==offset)] #only have descrete values, there is a smothed line drawn but no point where they intercect. 
+```
+
+What happened? I'm going to take a guess: When we solve for the offset, the log likelihood - $\chi^2_1(0.95)$, we end up with a very specific value for y. Next we went looking for that very specific solution, that did not depend on any of the specific values in our pvec. That is, I think the solutions for y=offset are for values in x (p) that were between values we actually specified. We'll talk through this because I see it's not so easy to explain on the page...
+
+But on to the solution - we need to have some machinery that let's us walk around in the parameter space (the domain for p) to find the values associated with end points. We just need to find the roots of the log likelihood function where it equals the offset we computed. OK, maybe we don't actually want to do that because it sounds like some potentially difficult algebra. Well, we can use optimization routines in R and specify the log likelihood just a bit differently to let R solve for these roots. Let's have a go.
+
+```{r}
+# define analytic function to compute loglikelihood as function of theta
+# here, we want the binomial function and we are interested in values for p
+# n and k are assumed to be specified in the workspace - won't work otherwise
+log.lik <- function(theta){
+  logL = sum(dbinom(k,n,theta,log=T)) # get densities, liklihood bernoulii
+  return(-logL)
+}
+
+# get mle using optimize() to numerically optimize over full parameter space
+# see that we get the same result as we got using plug'n'chug above
+mle <- optimize(log.lik,c(0,1)) #to move around [0,1] space
+mle
+
+# render the plot again
+plot(pvec, binom.loglik(n,k,pvec), type="l", xlim=xZoom, ylim=yZoom,
+     xlab=expression(bolditalic(hat(p))), ylab="log likelihood")
+
+# add a vertical line to indicate the MLE
+abline(v=mle$minimum,lty=3)
+
+# now add horizontal lines to indicate ML and the 95% liklihood profile
+abline(h=-mle$objective)
+abline(h=-mle$objective-qchisq(0.95,1))
+
+# now solve for the endpoints of the 95% profile likelihood using uniroot()
+# uniroot() searches for a single solution across a specified interval
+# if the interval contains >1 root, it complains
+# so I've split the interval using the known midpoint (pStar)
+prof=-mle$objective-qchisq(0.95,1)
+lowlim <- uniroot(function(z) Vectorize(log.lik)(z)+prof,c(0,pStar))$root
+uplim <- uniroot(function(z) Vectorize(log.lik)(z)+prof,c(pStar,1))$root
+
+# check that we got the correct roots
+# should cross the intersection of profile line and logL curve
+abline(v=lowlim,col="red",lty=2)
+abline(v=uplim,col="red",lty=2)
+
+# now output the specific numbers on the plot
+text(lowlim,0,round(lowlim,3))
+text(uplim,0,round(uplim,3))
+text(pStar,0,round(pStar,3),font=4)
+```
+
+
+Optomization - minimum easier than maximum for some reason  
+monotonic
+gaussian
+MCMC gets around local minimum, not global minimum
+minimum is bounded by 
+
+streamflow - can't be negative, so lognormal,
+domain - any non negative number
+could also use gamma - a flexible distribution for non-negative
+```{r}
+# [z|alpha,beta]
+set.seed(100)
+
+z<-rlnorm(3,log(1000),3)
+alpha <- log(median(z))
+
+
+#if assuming
+mn <- seq(0.1,)
+# plug in z for lognormal 
+dlnorm(z[1])*dlnorm(z[2])*dlnorm(z[3])
+
+```
+
+

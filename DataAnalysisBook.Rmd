@@ -72,6 +72,32 @@ sum(areaofbars)
   
   
 ```
+```{r}
+# declare the values for some parameters to not be the same for two different samples
+reps<-5000 # number of experiments to run
+n<-20 # sample size for each treatment in our experiment
+mu<-25 # population average for each treatment, central tendency for normal distribution
+sig<-3 # population standard deviation for each treatment
+p<-NULL # declare a null vector to collect the p-vals
+set.seed(100)
+# now set up a loop for pedagogical clarity
+for(j in seq(10,60,by=10)){
+for (i in 1:reps) {
+  trt1<-rnorm(n,mu,sig+j) # take n samples from "trt1"
+  trt2<-rnorm(n,mu,sig+j) # take n samples from "trt2", but use same distribution
+  # i.e. parameters are identical for both sample distributions
+  # that means the data were from the same exact random process
+  # so mu1 = mu2 is true for our simulated data
+  p[i]<-t.test(trt1,trt2)$p.value # do the t-test and harvest the p-values
+}
+  hist(p, main=bquote(~sigma == .(sig+j)*"; type I error:"~
+                        .(round(mean(p<0.05)),5))) 
+}
+
+#noise and signal are stated as sums, when independent can sum them --> linearity and then a Gaussian family of distirbutions, monotonically increasing and CLT
+#normal distirubtion with infinite variance will go flat - like uniform but can still be defined as normal 
+#if Gaussian but independent then sums and can get to normal distribution. as in what goes into the height of a person (lots of processses, nutrition, stuff) then the sum of all processes gets to a normal distribution, the processes are subsummed. 
+```
 
 # Inference
 
@@ -529,6 +555,23 @@ ggplot(data.frame(x,ytypeII), aes(x,ytypeII))+
   theme_classic()
 ```
 
+
+```{r}
+set.seed(1)
+
+x <- rnorm(5)
+t <- sqrt(5)*mean(x)/sd(x) #0.452
+B <- 1000
+
+ttestgenerator <- function(n, mean= 0.1351357, sd=0.6688342){
+  cases <- rnorm(n,mean,sd)
+  controls<-rnorm(n,mean,sd)
+  tstat<-(mean(cases)-mean(controls))/sqrt(var(cases)/n+var(controls)/n)
+  tstat
+}
+
+ttestgenerator(B) #0.09025316
+```
 
 
  

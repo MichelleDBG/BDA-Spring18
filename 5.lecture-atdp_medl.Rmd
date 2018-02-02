@@ -1,0 +1,75 @@
+---
+title: "Lecture Notes"
+output:
+  pdf_document:
+    fig_caption: yes
+    fig_height: 4
+    fig_width: 5
+  html_notebook: default
+  html_document: default
+---
+
+##Review
+
+To recap briefly, we started by considering that we will not ever be able to perfectly know anything we study, and that we should therefore learn to become more comfortable with inductive reasoning, at least when we use data to make inferences. Deductive reasoning is perfectly fine (and preferred) for the development of theory. Theory development can and should be informed by empirical results, but theoretical proofs and conclusions can be and most often are entirely deductive. Data-based inferences, on the other hand, should always be presented from an inductive perspective. It's our responsibility to present our results as estimates and the uncertainty associated with an incomplete set of information (sample of data, finite set of repeated experiments, incomplete understanding of the system components, etc.). We then considered ways to do this for measurement data on the interval/ratio scale using probability models (normal, t), or using resampling algorithms. For nominal data, it's often possible to finitely characterize all possible outcomes of an experiment. That means we can directly compute the probability of a given result or of a hypothetical set of results; we don't need to fit data to a model, and we don't need to resample to shuffle the set of observed outcomes. 
+
+Explanatory variables on the interval/ratio scale are named "covariates". The interest is usually to figure out the extent to which they covary with the variance of an interval/ratio response variable. Explanatory variables on the nominal scale are called "cofactors", or simply "factors". We've encountered cofactors already in the study of measurement response variables. A t-test for difference between means uses the variability from the two levels of a cofactor to explain variance in the response variable on the interval scale. We'll study covariates when we get to regression and correlation. But first, let's take a look at what to do when our *response* variable is on the nominal scale. This lecture covers those constructs and discusses best practices for reporting results from studies that use nominally-scaled outcome variables.
+
+*****
+
+##Classic Inference for Nominally Scaled Response Variables
+
+Just as we did for response variables on the interval scale, we'll start without an explanatory variable. We'll consider simple hypothesis tests for set parameter values and then study confidence intervals for data-based estimates of the parameter(s). We'll then move on to the use of cofactors to explain variance in nominally-scaled response variables, and look at tests and estimates. We'll consider the case of covariates to explain variance in nominally-scaled responses when we study GLMs after spring break.
+
+Response variables on the nominal scale are modeled directly using the multinomial distribution. If the nominal response variable has only two possible values, then the binomial distribution is used. The binomial a special case of multinomial, used when the number of factor levels is exactly 2 (thus the term bi-nomial). A "hypothesis test" in this case can be done directly from the binomial distribution. For example, let's consider the Lady Testing Tea experiment that Fisher conducted. Let's simplify it so that cups were not given in pairs, and we want to know the probability of getting 3 of 4 correct decisions if she were simply guessing at random. First, you need to recognize the model and associated parameter value. In this case, we have 4 Bernoulli trials and if she were guessing at random the probability of guessing correctly would be 0.5 because there are only two choices. We are interested in the probability of her getting 3 or 4 correct (out of 4 total) if she were to guess at random. Simple. Just use the binomial distribution to find the cumulative probability in the upper tail and then double that (in case she guessed randomly in the and got he lower tail result). To get the correct probability, we need to use the cumulative probability distribution, but since this is a nominal scale, the computation is for P(X < x), and not P(X $\leq$ x). That means we want to ask R for the probability of getting greater than 2 of 4, which would include the probability for 3 and 4. Don't forget to flip the call to collect the upper tail:
+```{r}
+n <- 4 # number of chances
+k <- 3 # number of correct guesses
+p <- 0.5 # probability of guessing correctly at random
+pbinom(k-1,n,p,lower.tail=F)
+```
+
+OK. So what do you think? Can she tell whether milk was added before or after the tea? Depends on how much you have at risk, I'd guess. The futility and stupidity of null hypothesis tests are once again exposed.
+
+Let's just estimate the probability that the Lady can tell the difference. Seems like something of greater interest, doesn't it? We need to make sure that we also provide an uncertainty around the point estimate for that probability. To do this, we'll load the package "binom", so that we can use binom.confint().
+
+```{r}
+library(binom)
+binom.confint(k,n,methods = "exact")
+```
+OK. So what does this tell us? (Discuss in class)
+
+##Contingency Tables
+
+When we use variance in one nominally scaled variable to explain variability in another nominally scaled variable, you should recall from basic stats and basic biology that this traditionally calls for a $\chi^2$ test of independence. That's certainly what we once had to do, but no more. That procedure involved simple computations that could be done by hand, and the probabilities could be looked up in pre-published tables. That's because we aren't actually computing any probability directly, but are instead relying on a $\chi^2$ approximation for the results. The $\chi^2$ test is an asymptotic method just like the t and z tests we considered earlier. You might even remember that you need cell counts >5 in your contingency table for the results to be valid. Good news is that computers now can compute combinatorics very quickly, so there's absolutely no reason at all to use the $\chi^2$ test ever again. I'll write that again - there is *absolutely NO reason to do a $\chi^2$ test ever again*. We should stop teaching it in undergraduate biology courses.
+
+Far better to figure the exact combinatorics and learn how to use and interpret odds ratios to report effect sizes. Let's look at some data from the Tomback lab on tree seedling survival. The question of interest is whether tree seedlings were more or less likely to survive in each of four different microhabitat situations. Seedlings were planted near either whitebark pine trees, spruce trees, rocks, or out in the open. The seedlings were then monitored over time to see whether they lived or died. You can think of the response variable as having sample space {live, die}, and the explanatory variable having sample space {whitebark, spruce, rock, open}. In the hypothesis framework, the question would be "Is survival of seedlings independent of microhabitat setting?" The estimation question is "what are the odds of survival in one microhabitat setting relative to another?" Think about the differences between those questions. We'll discuss them in class. OK, now the data are simple:
+
+```{r}
+seedlings<-matrix(c(11,1,8,9,18,14,5,14),nrow=4,byrow=T)
+mstype<-c("whitebark","spruce","rock","open")
+fate<-c("alive","dead")
+dimnames(seedlings)<-list("microsite"=mstype,"outcome"=fate)
+seedlings
+```
+
+Using this contingency table, we can use combinatorics to carry out a Fisher exact test for the probability that the rows and columns are independent.
+
+```{r}
+fisher.test(seedlings)
+```
+
+What did we learn? Well, I'm not really sure. Maybe you can help here. Discuss in class.
+
+***
+
+I much prefer to consider estimates for effect sizes and the associated uncertainty. We use odds and odds ratios to do this for nominally scaled outcome variables. For example, in this case, the odds of survival is computed as the ratio of the probability of survival to the probability of death. So if the probability of survival was 0.75, then the probability of death would be 1-0.75, or 0.25. The odds of survival then is 0.75/0.25 = 3, indicating that the odds of survival is three times as great as for death. Another way to say this: a tree is three times more likely to survive than to die. Easy enough. So we can compute these for each microhabitat type using the observed frequencies. For example, the odds of survival for seedlings near pine trees is (11/12)/(1/12), or 11. This means that seedlings near pine trees were 11 times more likely to survive than to die during the interval that we monitored. In a similar way, the odds of survival for seedlings near spruce are 8:9, or 0.9. This means that seedlings were 0.9 times more likely to survive than to die. Odds are usually easier to understand when phrased as integers. If we flip the ratio above, we have 9:8 = 1.125, indicating that seedlings near spruce are 1.125 times more likely to die than survive. Confused yet?
+
+For comparisons, we do need to keep the ratios in the same order, so learning how to interpret odds < 1.0 is a useful thing. Comparisons are called odds ratios, and those are exactly what they sound like: a ratio of odds. So to write the interpretation, you just need to be clean with your book keeping. For example, let's compute the odds ratio for survival near pine vs survival near spruce. From above, the odds of survival near pine is 11, and the odds of survival near spruce is 0.9, so the odds ratio of pine relative to spruce is 11/0.9 = 12.22 which is reported as "The odds of seedling survival near pine is 12.22 times that for seedlings near spruce". OK, so that was simple using back-of-the-envelope calculations based on our frequencies. Let's let R do the exact calculations using combinatorics. For this, we'll use a function in the epitools package, a library of functions for epidemiology, where fates are often the response variable of interest...
+
+```{r}
+library(epitools)
+oddsratio.fisher(seedlings)$measure
+```
+
+Wait a minute. What's all that about chisq.test? I thought we were computing the exact values. Let's see what that function is really doing. Ask R for help on this function by typing ?oddsratio. We'll look at this in class and discuss.
