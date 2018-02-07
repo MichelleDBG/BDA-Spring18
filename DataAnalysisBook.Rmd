@@ -573,5 +573,99 @@ ttestgenerator <- function(n, mean= 0.1351357, sd=0.6688342){
 ttestgenerator(B) #0.09025316
 ```
 
+```{r}
+library(devtools)
+install_github("genomicsclass/GSE5859Subset")
+library(GSE5859Subset)
+data(GSE5859Subset)
+dim(geneExpression)
 
- 
+
+### Exercises 6.2, help!
+#1 how many samples processed on 2005-06-27
+table(sampleInfo$date) #5?? 5 subjects, 8793 genes per subject, 5 samples?
+geneexp.cols <- match(sampleInfo$filename[sampleInfo$date == "2005-06-27"],colnames(geneExpression))
+geneExpression[,geneexp.cols]
+trows.geneAnn <- match(geneAnnotation$PROBEID,rownames(geneExpression[,geneexp.cols]))
+table(geneAnnotation$CHR[trows.geneAnn])
+#2 how many genes on chromosome Y?
+table(geneAnnotation$CHR) #21
+#3 What is the log expression value of hte gene ARPC1A on the one subject we measured on 2005-06-10
+table(geneAnnotation$CHR)
+log()
+
+
+e<- geneExpression[25,]
+library(rafalib)
+mypar(1,2)
+
+qqnorm(e[g==1])
+```
+#6.4 exercises
+```{r}
+population <- read.csv(text=getURL("https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/femaleControlsPopulation.csv"))
+
+set.seed(1)
+pvals <- replicate(1000,{
+  control <- sample(population[,1],12)
+  treatment <- sample(population[,1],12)
+  t.test(treatment,control)$p.val
+})
+hist(pvals)
+
+#1 proportions p-val below 0.05
+length(pvals[pvals<0.05])/length(pvals) #0.041
+#2 proportion p-vals below 0.01
+length(pvals[pvals<0.01])/length(pvals) #0.008
+#3 mu = 30 and sigma = 2 (SD)
+cases<- rnorm(10,30,2)
+controls <- rnorm(10,30,2)
+t.test(cases,controls)
+
+#4 Monte Carlo 
+set.seed(1000) #will define Monte Carlo as the random chance of different means from same distribution  
+pvals <- sapply(1:200, function(diet){
+  cases <- rnorm(20,30,2)
+  pval <- t.test(cases[1:10],cases[11:20])$p.val
+})
+
+hist(pvals)
+length(pvals[pvals<0.05])/length(pvals) #0.05
+
+
+```
+
+#Vectorize!   
+```{r}
+N <- 12
+m <- 10000
+p0 <- 0.90 #10% of diets work
+m0 <- m*p0
+m1 <- m-m0
+nullHypothesis <- c(rep(TRUE,m0),rep(FALSE,m1)) #null is true m0% of time
+delta<-3
+alpha<-0.05
+
+#define groups
+g <- factor(c(rep(0,N),rep(1,N)))
+B <- 1000 #number of simulations
+Qs <- replicate(B,{
+  controls <- matrix(sample(population$Bodyweight,N*m, replace=TRUE),nrow=m)
+  treatments <- matrix(sample(population$Bodyweight, N*m, replace=TRUE), nrow=m)
+  #add effect to 10% of them
+  treatments[which(!nullHypothesis),]<-treatments[which(!nullHypothesis),]+
+    delta
+  dat <- cbind(controls,treatments)
+  calls <- rowTtest
+  
+  calls <- do.call(c,apply(dat,1,function(disdat){
+    pout <- t.test(disdat[which(g==0)],disdat[which(g==1)])$p.val
+    if(pout < alpha) pout
+  }))
+  R<-sum(calls)
+  Q <- ifelse(R>0,sum(nullHypothesis & calls)/R, 0)
+  Q
+})
+
+
+```
