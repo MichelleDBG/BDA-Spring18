@@ -33,10 +33,6 @@ qpcr <- data.frame(trt = c(rep("control",12),rep("treatment",12)),
 library(sm)
 sm.density.compare(qpcr$dct,qpcr$trt,xlab=expression(paste(Delta,C[t])))
 legend(4.2,1.4,levels(qpcr$trt),lty=c(1,2),col=c("red","green"))
-
-library(ggplot2)
-ggplot(qpcr, aes(dct,group=trt,fill=trt))+
-  geom_histogram(position="dodge",binwidth=0.25)+theme_bw()
 ```
 
 ```{r}
@@ -61,9 +57,9 @@ hist(rand.diff,main="randomized sampling distribution",
 points(obs.diff,0,cex=2.5,pch=16)
 text(obs.diff,200,"observed",cex = 0.5)
 abline(v = -.414)
-text(-0.414,1000,"CI: 0.05")
+text(-0.46,1000,"CI: 0.05", srt=90,cex=0.5)
 abline(v= -0.956)
-text(-0.956, 1000, "CI 0.95")
+text(-0.99, 1000, "CI 0.95", srt=90, cex=0.5)
 pval <- mean(abs(rand.diff)>abs(obs.diff))
 pval
 ```
@@ -73,7 +69,7 @@ pval
 a. Does the shape of the density curves justify the use of means as a summary statistic? Explain.
   - The density curve indicates that the means are not normally distributed. There are two peaks (bimodal) in the control and some indication of a second peak in the treatment. There may be more than one process determining the average. 
 b. N=12 for each of the two treatments. Is that sample size large enough to do a t-test? Explain.  
-  - The sample size is large enough to do a t-test but might not be large enough to describe the mean and standard distriubtion of the averages. If the sample size were smaller, the estimation of the difference in mean would become less peaked (less likely) and the variation around the estimate will grow. 
+  - The sample size is large enough to do a t-test but might not be large enough to describe the mean and standard distriubtion of the average. It is possible if the sample size were larger that the distribution would be more normal and a difference in means would be the approapiate test. If the sample size were smaller, the estimation of the difference in mean would become less peaked (less likely) and the variation around the estimate will grow. The likelihood of a type I error would greatly increase. 
 ```{r}
 # do a randomization test for difference in means
   obs.diff <- diff(tapply(qpcr$dct,qpcr$trt,mean))
@@ -94,20 +90,22 @@ rand.diff <- do.call(rbind, lapply(seq(12,2,-2), function(x){
   )
 
 library(ggplot2)
-ggplot(rand.diff, aes(DiffMean, colour=as.factor(SampleSize)))+
+ggplot(rand.diff, aes(DiffMean, fill=as.factor(SampleSize)))+
   geom_density(alpha=0.25)+
   theme_bw()+
   xlab(expression(paste("Difference in mean ",Delta,C[t]," (treatment - control)")))+
-  scale_color_discrete(name = "Sample Size")+
+  scale_fill_discrete(name = "Sample Size")+
   geom_text(aes(x=-0.78,y=0.25), label="Obs diff",
             angle=90)+
   geom_vline(aes(xintercept = -0.68))
   
 ```
 c. Evaluate the assumptions for each test and describe the extent to which they are met.   
-  - The basic t-test seems assuptions are not met. The distributions of the treatment and the control samples cannot be expressed as a normal distribution. The permutation test approaces a normal distribution.      
+  - The basic t-test assuptions are not met. The distributions of the treatment and the control samples cannot be expressed as a normal distribution. The permutation test approaces a normal distribution.      
 ```{r}
-hist(rand.diff)
+hist(rand.diff$DiffMean[rand.diff$SampleSize == 12],
+     main="randomized sampling distribution",
+     xlab=expression(paste("Difference in mean ",Delta,C[t]," (treatment - control)")))
 ```
       
 d. Write some code to carry out a permutation test for the difference in values of a more appropriate summary statistic (given the desitributions of $\Delta C_t$ for the treatment and control)    
@@ -128,8 +126,11 @@ points(obs.diff,0,cex=2.5,pch=16)
 text(obs.diff,200,"observed",cex = 0.5)
 pval <- mean(abs(rand.diff)>abs(obs.diff))
 pval
+#No, terrible bimodal strange behaviour. 
+```
 
-#The peak, median value?
+```{r}
+#The peak, mean value?
 # do a randomization test for difference in means
 obs.diff <- diff(tapply(qpcr$dct,qpcr$trt,mean))
 reps <- 10000
@@ -163,44 +164,54 @@ points(obs.diff,0,cex=2.5,pch=16)
 text(obs.diff,200,"observed",cex = 0.5)
 pval <- mean(abs(rand.diff)>abs(obs.diff))
 pval
-3
+
 ```
 
-- 95% CI 
+  - 95% CI   
 ```{r}
 # do a randomization test for difference in medians
   obs.diff <- diff(tapply(qpcr$dct,qpcr$trt,median))
-  reps <- 10
-  sims <- 5
+  reps <- 100
+  sims <- 100
   rand.diff <- NULL
-  CI95 <- NULL
   
   set.seed(30)
-  for(s in 1:sims){
-    for (i in 1:reps) {
-    rindx <- sample(1:24,24,replace=TRUE)
-    if(length(rindx[rindx>12])>22|
-       length(rindx[rindx>12])<2){
-      next
-    } else {
-      qpcr.sam <- qpcr[rindx,]
-      rand.diff[i] <- diff(tapply(qpcr.sam$dct,qpcr.sam$trt,median))
+  CI95 <- do.call(rbind, lapply(1:sims, function(sim){
+    sapply(1:reps, function(rep)){
+      
     }
+      uneven <- FALSE
+              rindx <- sample(1:24,24,replace=TRUE) #could have sampled same numbers from population
+              uneven <- length(rindx[rindx>12])>22|
+                length(rindx[rindx>12])<2
+      while(!uneven){
+              qpcr.sam <- qpcr[rindx,]
+              rand.diff[i] <-
+                diff(tapply(qpcr.sam$dct,qpcr.sam$trt,median))
+              }
+              out <- data.frame(RandDiff = rand.diff, Sim = sim)
+              out
+              }}))
+  
+
     #Is the obs.diff within the upper and lower quatiles of the rand.diff distribution?
     #There will be a few NAs because of the next when sampled fewer than 2 of either treatment
-    within95CI[s] <- if(obs.diff<quantile(rand.diff,0.95, na.rm=TRUE)&
-                     obs.diff>quantile(rand.diff,0.05, na.rm=TRUE)){
+    quants <- tapply(CI95$RandDiff, CI95$Sim, function(x){
+      Upper <- quantile(x,0.95,na.rm=TRUE)
+      Lower <- quantile(x,0.95, na.rm=TRUE)
+      data.frame(Upper,Lower)
+    })
+                     quantile(rand.diff,0.95, na.rm=TRUE)&
+                     obs.diff>quantile(rand.diff,0.05, na.rm=TRUE){
       c(Lower=quantile(rand.diff,0.05, na.rm=TRUE),
         Upper=quantile(rand.diff,0.95, na.rm=TRUE))
       } else {
         c(Lower=NA,Upper=NA)
       }                   
-    } 
-  }
-  
+
   
 
-hist(within95CI,main="randomized sampling distribution",
+hist(CI95,main="randomized sampling distribution",
      xlab=expression(paste("Difference in median ",Delta,C[t]," (treatment - control)")))
 points(obs.diff,0,cex=2.5,pch=16)
 text(obs.diff,200,"observed",cex = 0.5)  
