@@ -206,51 +206,38 @@ plot(seq(-.1,.1,length=100),1:100,type="n",xlab="difference in medians",
      ylab="interval")
 abline(v=mean(diffs))
 for(i in 1:100){
-  covered<- mean(diffs.matrix[i,]) <= interval.dist[i,1] &
-    mean(diffs.matrix[i,]) >= interval.dist[i,2]
-  color <- ifelse(covered, "red","yellow")
+  covered<- obs.diff <= interval.dist[i,2] &
+    mean(obs.diff) >= interval.dist[i,1]
+  color <- ifelse(covered, "blue","red")
   lines(interval.dist[i,], c(i,i),col=color)
 }
+
+hist(rand.diff,main="randomized sampling distribution",
+     xlab=expression(paste("Difference in median ",Delta,C[t]," (treatment - control)")))
+points(obs.diff,0,cex=2.5,pch=16)
+text(obs.diff,200,"observed",cex = 0.5)
+abline(v=obs.diff-qnorm(1-0.05/2)*mean(se.dist), col="red")
+abline(v=obs.diff+qnorm(1-0.05/2)*mean(se.dist), col="red")
+
+
+obs.diff-qnorm(1-0.05/2)*mean(se.dist) #-0.66
+obs.diff+qnorm(1-0.05/2)*mean(se.dist) #-0.58
+
+mean(diffs)
+interval.dist[1,]
 ```
-
-Lots of wrong answers:
-#Want the 95% CI of the observed differences, not of the null, right? 
-#CIwidth <- do.call(rbind,lapply(1:100,function(row){
-#  sapply(seq(0.5,1,0.1), function(quant){
-#    CI.U <- quantile(diffs.matrix[row,],quant)
-#    CI.L <- quantile(diffs.matrix[row,],1-quant)
-#    out <- CI.U>mu&CI.L<mu
-#    out
-#  })
-#}))
-
-#colMeans(CIwidth)
-
-#hist(diffs,main="randomized sampling distribution",
-#     xlab=expression(paste("Difference in median ",Delta,C[t]," (treatment - control)")))
-#points(obs.diff,0,cex=1.5,pch=16)
-#text(obs.diff,200,"observed",cex = 0.5)
-#points(mean(CI95$CI95),0,cex=2)
-#points(mean(CI95$CI05),0,cex=2)
-#points(quantile(diffs,.6),0,cex=3) #No!!
-#points(quantile(diffs,.4),0,cex=3)
-```
-
-
-
-
-
+    
 d. Write a "results" section based on your answers and the most appropriate R output. Justify your reporting decisions.  
-  - The difference in median gene expression of this bimodal distribution is greater than expected if there were no effect of treatment. The 95% confidence interval is 
+  - The difference in median gene expression of this bimodal distribution is greater than expected if there were no effect of treatment. The observed difference (-0.62 with a 95%CI of -0.66 to -0.58) is outside of 95% CI of the median difference in expression if there were no effect (0.002 95%CI of -0.006 to 0.06). 
 
 ****
 
 #####Nonparametric bootstrap for estimation
 
-Let's continue with the qpcr data from above. Often, qpcr results are given in terms of the fold change in expression for two levels of the treatment variable. For example, we might want to quantify the x-fold decrease in expression for the control vs treatment conditions. To compute this, we first need the
-difference in the $\Delta C_t$ for the control and treatment. Let's compute $\Delta\Delta C_t$ as the difference in median $\Delta C_t$ for the control and treatment (usually people take the differnce in the $\Delta C_t$ averages, not the medians. But that's only by convention, so we'll illustrate the flexibility of simulation-based inference.
+Let's continue with the qpcr data from above. Often, qpcr results are given in terms of the fold change in expression for two levels of the treatment variable. For example, we might want to quantify the x-fold decrease in expression for the control vs treatment conditions. To compute this, we first need the difference in the $\Delta C_t$ for the control and treatment. Let's compute $\Delta\Delta C_t$ as the difference in median $\Delta C_t$ for the control and treatment (usually people take the differnce in the $\Delta C_t$ averages, not the medians. But that's only by convention, so we'll illustrate the flexibility of simulation-based inference.
 
-The measures for QPCR are in log base 2, so to find the expression fold change, we compute $2^{\Delta\Delta C_t}$. The standard method for doing this uses but a single number for a set of experiments. This discards/ignores observed variance. Let's look at a way to use simulation to create a sampling distribution for the expression fold change. I will write the code for generating one such resampled expression fold value. Your task is to complete the code to generate the sampling distribution for that statistic and then report the result. Remember that in this you are not randomizing the treatments, so when you call the sample() function, you want to preserve the trt-dct dependencies (i.e. sample by rows). Don't worry about constraining your resamples to be balanced. We want to characterize the full range of variance. Warning: you might get all "control" values for some bootstrap resamples, which will prevent you from computing the fold change - don't worry about that. Just take another sample.
+The measures for QPCR are in log base 2, so to find the expression fold change, we compute $2^{\Delta\Delta C_t}$. The standard meth
+od for doing this uses but a single number for a set of experiments. This discards/ignores observed variance. Let's look at a way to use simulation to create a sampling distribution for the expression fold change. I will write the code for generating one such resampled expression fold value. Your task is to complete the code to generate the sampling distribution for that statistic and then report the result. Remember that in this you are not randomizing the treatments, so when you call the sample() function, you want to preserve the trt-dct dependencies (i.e. sample by rows). Don't worry about constraining your resamples to be balanced. We want to characterize the full range of variance. Warning: you might get all "control" values for some bootstrap resamples, which will prevent you from computing the fold change - don't worry about that. Just take another sample.
 
 ```{r}
 # just the basic function to compute expression fold change
@@ -275,12 +262,23 @@ reps <- 5000
 set.seed(3023)
 boot.exfc <- NULL
 
+for(i in 1:reps){
+  indx <- sample(1:n,n,TRUE)
+  boot<-qpcr[indx,]
+  boot.exfc[i] <- 2^diff(tapply(boot$dct,boot$trt,median)) 
+}
 
+hist(boot.exfc)
+abline(v=mean(boot.exfc)-qnorm(1-0.05/2)*(sd(boot.exfc)/sqrt(n)),col="red") #0.62
+abline(v=mean(boot.exfc)+qnorm(1-0.05/2)*(sd(boot.exfc)/sqrt(n)),col="red") #0.68
+
+boxplot(boot.exfc)
 ```
 
 
 #####Question 2
-a. Write a sentence that you might put in a results section to describe the expression fold change estimate (the effect size) and the uncertainty in that estimate (hint: use the quantiles of the sampling ditribution you created). Feel free to also show the sampling distribution if you like. Just be sure to explain it if you do.
+a. Write a sentence that you might put in a results section to describe the expression fold change estimate (the effect size) and the uncertainty in that estimate (hint: use the quantiles of the sampling ditribution you created). Feel free to also show the sampling distribution if you like. Just be sure to explain it if you do.   
+  - The x-fold decrease in expression is 0.65 (95%CI 0.62-0.68). All estimated effect sizes show some decrease.  
 
 
 ****
@@ -298,7 +296,10 @@ samp <- read.csv("P:/My Documents/BDA_Spring2018/carbon.csv")
 hist(samp$d13C, main="Sample distribution", xlab = expression(paste(delta^13,"C")))
 
 ```
+   
+  - Insects collected from both the cropland and the grassland lumped in one sample distribution. The sampling distribution should indicate whether an insect collection primarily fed on C3 or C4 plants. This would be a ratio... Each observation would indicate the proportion of feeding on C3 vs. C4. Very few fed on just one or the other ($\phi$ = 1) or both equally ($\phi$ = 0.5). Bimodal distribution of likely $\phi$ = 0.75 for C3 and 1-$\phi$ = 0.25 for C4 (with C3 resulting in the peak around -25). An odds ratio of C3/C4 of 3 with $\mu$ ca. -25 and C4/C3 of 1:3 with $\mu$ ca. -14.  
 
 #####Question 3
-a. What summary statistic(s) would you use to describe the distribution here? Justify your choices.
+a. What summary statistic(s) would you use to describe the distribution here? Justify your choices.   
+  - I would use an odds ratio 
 b. Can you use simulation-based methods to generate a sampling distribution for your summary statistic?
