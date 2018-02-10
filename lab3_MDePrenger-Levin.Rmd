@@ -11,8 +11,7 @@ output:
 
 ####*We don't need no stinking t-tables...*
 
-Monte Carlo simulation methods are really useful for generating sampling distributions for cases where we don't know what t
-he sampling distribution will be in the limit - that is, for when we can't write a distribution function in closed form (can be written as area under curve = 1). This lab will explore a number of ways to use simulation for inference in data analysis.
+Monte Carlo simulation methods are really useful for generating sampling distributions for cases where we don't know what the sampling distribution will be in the limit - that is, for when we can't write a distribution function in closed form (can be written as area under curve = 1). This lab will explore a number of ways to use simulation for inference in data analysis.
 
 ****
 
@@ -54,11 +53,11 @@ for (i in 1:reps) {
 hist(rand.diff,main="randomized sampling distribution",
      xlab=expression(paste("Difference in mean ",Delta,C[t]," (treatment - control)")),
      xlim=c(-1,1))
-points(obs.diff,0,cex=2.5,pch=16)
+points(obs.diff,100,cex=2.5,pch=16)
 text(obs.diff,200,"observed",cex = 0.5)
-abline(v = -.414)
+abline(v = -.414, col="red")
 text(-0.46,1000,"CI: 0.05", srt=90,cex=0.5)
-abline(v= -0.956)
+abline(v= -0.956, col="red")
 text(-0.99, 1000, "CI 0.95", srt=90, cex=0.5)
 pval <- mean(abs(rand.diff)>abs(obs.diff))
 pval
@@ -101,7 +100,7 @@ ggplot(rand.diff, aes(DiffMean, fill=as.factor(SampleSize)))+
   
 ```
 c. Evaluate the assumptions for each test and describe the extent to which they are met.   
-  - The basic t-test assuptions are not met. The distributions of the treatment and the control samples cannot be expressed as a normal distribution. The permutation test approaces a normal distribution.      
+  - The basic t-test assuptions are not met. The distributions of the treatment and the control samples cannot be expressed as a normal distribution. The permutation test approaches a normal distribution.      
 ```{r}
 hist(rand.diff$DiffMean[rand.diff$SampleSize == 12],
      main="randomized sampling distribution",
@@ -131,7 +130,7 @@ pval
 
 ```{r}
 #The peak, mean value?
-# do a randomization test for difference in means
+# do a randomization test for difference in means to compare to the median
 obs.diff <- diff(tapply(qpcr$dct,qpcr$trt,mean))
 reps <- 10000
 rand.diff <- NULL
@@ -144,12 +143,10 @@ hist(rand.diff,main="randomized sampling distribution",
      xlab=expression(paste("Difference in mean ",Delta,C[t]," (treatment - control)")))
 points(obs.diff,0,cex=2.5,pch=16)
 text(obs.diff,200,"observed",cex = 0.5)
-pval <- mean(abs(rand.diff)>abs(obs.diff))
-pval
 
 
 #The peak, median value?
-# do a randomization test for difference in means
+# do a randomization test for difference in median
 obs.diff <- diff(tapply(qpcr$dct,qpcr$trt,median))
 reps <- 10000
 rand.diff <- NULL
@@ -170,51 +167,73 @@ pval
   - 95% CI   
 ```{r}
 # do a randomization test for difference in medians
-  obs.diff <- diff(tapply(qpcr$dct,qpcr$trt,median))
-  reps <- 100
-  sims <- 100
-  rand.diff <- NULL
-  
-  set.seed(30)
-  CI95 <- do.call(rbind, lapply(1:sims, function(sim){
-    sapply(1:reps, function(rep)){
-      
-    }
-      uneven <- FALSE
-              rindx <- sample(1:24,24,replace=TRUE) #could have sampled same numbers from population
-              uneven <- length(rindx[rindx>12])>22|
-                length(rindx[rindx>12])<2
-      while(!uneven){
-              qpcr.sam <- qpcr[rindx,]
-              rand.diff[i] <-
-                diff(tapply(qpcr.sam$dct,qpcr.sam$trt,median))
-              }
-              out <- data.frame(RandDiff = rand.diff, Sim = sim)
-              out
-              }}))
-  
+obs.diff <- diff(tapply(qpcr$dct,qpcr$trt,median))
+reps <- 10000
+set.seed(30)
+
+diffs <- sapply(1:reps, function(sim){
+  median(sample(qpcr$dct, 12, replace=TRUE))-
+    median(sample(qpcr$dct, 12, replace=TRUE))
+})   
 
     #Is the obs.diff within the upper and lower quatiles of the rand.diff distribution?
-    #There will be a few NAs because of the next when sampled fewer than 2 of either treatment
-    quants <- tapply(CI95$RandDiff, CI95$Sim, function(x){
-      Upper <- quantile(x,0.95,na.rm=TRUE)
-      Lower <- quantile(x,0.95, na.rm=TRUE)
-      data.frame(Upper,Lower)
-    })
-                     quantile(rand.diff,0.95, na.rm=TRUE)&
-                     obs.diff>quantile(rand.diff,0.05, na.rm=TRUE){
-      c(Lower=quantile(rand.diff,0.05, na.rm=TRUE),
-        Upper=quantile(rand.diff,0.95, na.rm=TRUE))
-      } else {
-        c(Lower=NA,Upper=NA)
-      }                   
+    #There will be a few NAs because of the next when sampled fewer than 2 of
+diffs.matrix <- matrix(diffs, 100)
+hist(diffs)
 
-  
+# My own made up way:
+CI95 <- do.call(rbind,lapply(1:100,function(row){
+  data.frame(CI95=quantile(diffs.matrix[row,],0.95),
+             CI05=quantile(diffs.matrix[row,],0.05))
+}))
+# Try following page 41 in the book!
+se.dist <- sapply(1:100, function(row){
+  sd(diffs.matrix[row,]/sqrt(length(diffs.matrix[row,]))) #it's 100, a 100x100 matrix 
+})
+hist(se.dist)
 
-hist(CI95,main="randomized sampling distribution",
-     xlab=expression(paste("Difference in median ",Delta,C[t]," (treatment - control)")))
-points(obs.diff,0,cex=2.5,pch=16)
-text(obs.diff,200,"observed",cex = 0.5)  
+#95% of the time contain $\mu$ - Not quite the quantile...
+mu <- mean(diffs)
+mean(CI95$CI95>mu)
+mean(CI95$CI05<mu)
+# Right, give a normal distribution of the 0.05% on either tail (1-0.05/2)
+Q <- qnorm(1-0.05/2) #1.959964
+interval.dist <- do.call(rbind,lapply(1:100, function(row){
+  c(mean(diffs.matrix[row,]-Q*se.dist[row]),mean(diffs.matrix[row,]+Q*se.dist[row]))
+}))
+
+plot(seq(-.1,.1,length=100),1:100,type="n",xlab="difference in medians",
+     ylab="interval")
+abline(v=mean(diffs))
+for(i in 1:100){
+  covered<- mean(diffs.matrix[i,]) <= interval.dist[i,1] &
+    mean(diffs.matrix[i,]) >= interval.dist[i,2]
+  color <- ifelse(covered, "red","yellow")
+  lines(interval.dist[i,], c(i,i),col=color)
+}
+```
+
+Lots of wrong answers:
+#Want the 95% CI of the observed differences, not of the null, right? 
+#CIwidth <- do.call(rbind,lapply(1:100,function(row){
+#  sapply(seq(0.5,1,0.1), function(quant){
+#    CI.U <- quantile(diffs.matrix[row,],quant)
+#    CI.L <- quantile(diffs.matrix[row,],1-quant)
+#    out <- CI.U>mu&CI.L<mu
+#    out
+#  })
+#}))
+
+#colMeans(CIwidth)
+
+#hist(diffs,main="randomized sampling distribution",
+#     xlab=expression(paste("Difference in median ",Delta,C[t]," (treatment - control)")))
+#points(obs.diff,0,cex=1.5,pch=16)
+#text(obs.diff,200,"observed",cex = 0.5)
+#points(mean(CI95$CI95),0,cex=2)
+#points(mean(CI95$CI05),0,cex=2)
+#points(quantile(diffs,.6),0,cex=3) #No!!
+#points(quantile(diffs,.4),0,cex=3)
 ```
 
 
@@ -222,7 +241,7 @@ text(obs.diff,200,"observed",cex = 0.5)
 
 
 d. Write a "results" section based on your answers and the most appropriate R output. Justify your reporting decisions.  
-  - The difference in median gene expression of this bimodal distribution is greater than expected if there were no effect of treatment. 
+  - The difference in median gene expression of this bimodal distribution is greater than expected if there were no effect of treatment. The 95% confidence interval is 
 
 ****
 
@@ -275,7 +294,7 @@ Insects were collected from the prairies in C4 grassland and C3 cropland habitat
 So the goal is to decide how best to summarize your data in a publication. The code chunk below reads in the data and shows the histogram. The data file "carbon.csv" is posted on canvas. Your task is to write additional code to help you summarize the distribution. You must use the data to calculate summary statistics and/or for parametric simulation or bootstrapping to produce confidence intervals.
 
 ```{r}
-samp <- read.csv("carbon.csv")
+samp <- read.csv("P:/My Documents/BDA_Spring2018/carbon.csv")
 hist(samp$d13C, main="Sample distribution", xlab = expression(paste(delta^13,"C")))
 
 ```

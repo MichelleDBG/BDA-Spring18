@@ -26,7 +26,7 @@ Response variables on the nominal scale are modeled directly using the multinomi
 n <- 4 # number of chances
 k <- 3 # number of correct guesses
 p <- 0.5 # probability of guessing correctly at random
-pbinom(k-1,n,p,lower.tail=F)
+pbinom(k-1,n,p,lower.tail=F) #dont want greater than 3, 4-1 tells us the lower tail, so 1,2, want greater than 2|4; lower tail false, flipped
 ```
 
 OK. So what do you think? Can she tell whether milk was added before or after the tea? Depends on how much you have at risk, I'd guess. The futility and stupidity of null hypothesis tests are once again exposed.
@@ -34,10 +34,12 @@ OK. So what do you think? Can she tell whether milk was added before or after th
 Let's just estimate the probability that the Lady can tell the difference. Seems like something of greater interest, doesn't it? We need to make sure that we also provide an uncertainty around the point estimate for that probability. To do this, we'll load the package "binom", so that we can use binom.confint().
 
 ```{r}
+install.packages("binom")
 library(binom)
 binom.confint(k,n,methods = "exact")
 ```
-OK. So what does this tell us? (Discuss in class)
+OK. So what does this tell us? (Discuss in class)   
+This more informative. The CI so wide, very variable.   
 
 ##Contingency Tables
 
@@ -52,14 +54,21 @@ fate<-c("alive","dead")
 dimnames(seedlings)<-list("microsite"=mstype,"outcome"=fate)
 seedlings
 ```
+ - asking structure helpful like a rock, different than open different than other trees.    
+ - would have to sum error rate (0.05) for each microsite 
 
-Using this contingency table, we can use combinatorics to carry out a Fisher exact test for the probability that the rows and columns are independent.
+
+Using this contingency table, we can use combinatorics to carry out a Fisher exact test for the probability that the rows and columns are independent.   
+  - When independant, can do marginal distributions, know fractional outcome of each, have to be independent thus product. 
 
 ```{r}
 fisher.test(seedlings)
 ```
 
-What did we learn? Well, I'm not really sure. Maybe you can help here. Discuss in class.
+What did we learn? Well, I'm not really sure. Maybe you can help here. Discuss in class.   
+  - if independent of where seedlings occur, then we'd see larger p-value. 
+  - always could be another explaination of the data pattern seen - not really just this statistic, that's true for everthing. 
+  - tells me nothing about this random chance, the magnitude of p is unrelated to effect size. 
 
 ***
 
@@ -68,8 +77,13 @@ I much prefer to consider estimates for effect sizes and the associated uncertai
 For comparisons, we do need to keep the ratios in the same order, so learning how to interpret odds < 1.0 is a useful thing. Comparisons are called odds ratios, and those are exactly what they sound like: a ratio of odds. So to write the interpretation, you just need to be clean with your book keeping. For example, let's compute the odds ratio for survival near pine vs survival near spruce. From above, the odds of survival near pine is 11, and the odds of survival near spruce is 0.9, so the odds ratio of pine relative to spruce is 11/0.9 = 12.22 which is reported as "The odds of seedling survival near pine is 12.22 times that for seedlings near spruce". OK, so that was simple using back-of-the-envelope calculations based on our frequencies. Let's let R do the exact calculations using combinatorics. For this, we'll use a function in the epitools package, a library of functions for epidemiology, where fates are often the response variable of interest...
 
 ```{r}
+install.packages("epitools")
 library(epitools)
 oddsratio.fisher(seedlings)$measure
 ```
 
 Wait a minute. What's all that about chisq.test? I thought we were computing the exact values. Let's see what that function is really doing. Ask R for help on this function by typing ?oddsratio. We'll look at this in class and discuss.
+  - first 'anchors' everything. it's set, what's the odds of others in comparison? 
+  - whitebark to rock, 8 times greater in whitebark; whitebark to open = whitebark 27 times greater than open.  
+  - it is an x-folds change.  
+  - point estimate is more informative, however, the 95% CI 
