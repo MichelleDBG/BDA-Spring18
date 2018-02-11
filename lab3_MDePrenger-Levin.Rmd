@@ -285,7 +285,7 @@ a. Write a sentence that you might put in a results section to describe the expr
 
 #####Reporting summary stats and precision
 
-The final example is for a dataset of stable carbon isotope values ($\delta^{13}C$) measured in insect chitin. Isotope values are reported as deviations (in part per thousand) from a known standard, and so use the delta notation. In the case of carbon, most organic material has less of the heavy isotope than the interational standard (pee dee belemnite), so the values are negative.
+The final example is for a dataset of stable carbon isotope values ($\delta^{13}C$) measured in insect chitin. Isotope values are reported as deviations (in part per thousand) from a known standard, and so use the delta notation. In the case of carbon, most organic material has less of the heavy isotope than the interational standard (pee dee belemnite), so the values are negative.
 
 Insects were collected from the prairies in C4 grassland and C3 cropland habitats. $\delta^{13}C$ values in plants varies according to differences in water use efficiency; C3 plant $\delta^{13}C$ values tend to be more negative than those for C4 plants. This is because C4 plants respire less than C3 pants, so carbon metabolism in C4 recycles more of the heavy isotope $^{13}C$ than in C3 plants. You want to report something like the average of the isotope values at your study site so that you can compare it to previously published carbon isotope values from other sites.
 
@@ -301,5 +301,50 @@ hist(samp$d13C, main="Sample distribution", xlab = expression(paste(delta^13,"C"
 
 #####Question 3
 a. What summary statistic(s) would you use to describe the distribution here? Justify your choices.   
-  - I would use an odds ratio 
-b. Can you use simulation-based methods to generate a sampling distribution for your summary statistic?
+  - I have sampled insects from one site, however, that site contains C4 and C3 plants which will each result in a different average carbon isotope value. If insects feed in a random manner in regards to C3 or C4 plants than I would expect a mean isotope value of -19.0 (95%CI -19.1--18.9). The bimodal distribution of the sample implies that insects feed primarily on one plant form or another with an average isotope value of -25.1 (2SD 5.91) for C3 plant feeders and a mean of -13 (2SD 5.76) for C4 plant feeders.      
+```{r}
+mean(samp$d13C)
+
+sampC3 <- samp$d13C[samp$d13C<mean(samp$d13C)]
+2*sd(sampC3) #2.96, 2SD 5.91
+sdC3int <- c(mean(sampC3)-2*sd(sampC3),mean(sampC3)+2*sd(sampC3) )
+sampC4 <- samp$d13C[samp$d13C>=mean(samp$d13C)]
+2*sd(sampC4) #2.88, 5.76
+sdC4int <- c(mean(sampC4)-2*sd(sampC4),mean(sampC4)+2*sd(sampC4) )
+
+hist(sampC3,xlim = c(min(samp$d13C),max(samp$d13C)),
+     main="C3 feeders (white) and C4 feeders (red). Blue lines = 2SD",
+     xlab="Heavy isotope value")
+hist(sampC4, add=TRUE, col=rgb(1,0,0,0.5))
+lines(sdC3int,c(1,1),col="blue")
+lines(sdC4int, c(1,1), col="blue")
+```
+    
+
+b. Can you use simulation-based methods to generate a sampling distribution for your summary statistic?  
+```{r}
+samplingmu <- sapply(1:100, function(x){
+  median(sample(samp$d13C, nrow(samp),TRUE))
+})
+
+n<-length(samplingmu)
+
+hist(samplingmu)
+abline(v=mean(samplingmu)-qnorm(1-0.05/2)*(sd(samplingmu)/sqrt(n)),col="red") #-19.1
+abline(v=mean(samplingmu)+qnorm(1-0.05/2)*(sd(samplingmu)/sqrt(n)),col="red") #-18.9
+
+```
+   
+```{r}
+sampC3_v2 <- samp$d13C[samp$d13C<mean(samplingmu)]
+2*sd(sampC3_v2) #2.96, 2SD 5.91
+sdC3int_v2 <- c(mean(sampC3_v2)-2*sd(sampC3_v2),mean(sampC3_v2)+2*sd(sampC3_v2) )
+sampC4_v2 <- samp$d13C[samp$d13C>=mean(samplingmu)]
+2*sd(sampC4_v2) #2.88, 5.76
+sdC4int_v2 <- c(mean(sampC4_v2)-2*sd(sampC4_v2),mean(sampC4_v2)+2*sd(sampC4_v2) )
+
+hist(sampC3_v2,xlim = c(min(samp$d13C),max(samp$d13C)))
+hist(sampC4_v2, add=TRUE, col="red")
+lines(sdC3int_v2,c(1,1),col="blue")
+lines(sdC4int_v2, c(1,1), col="blue")
+```
