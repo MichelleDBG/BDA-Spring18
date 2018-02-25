@@ -1,0 +1,124 @@
+---
+title: "Lab 4 - formatting data and inferential limits"
+output:
+  pdf_document:
+    fig_caption: yes
+    fig_height: 4
+    fig_width: 5
+  html_notebook: default
+  html_document: default
+---
+
+####*What to do with all this data...*
+
+Ok, you've collected your data and now you're trying to get it into a format that you will be able to easily manipulate in R... This requires not only understanding the proper format for your data, but also an understanding of your study design.
+
+****
+
+#####Data structure in R
+
+We're going to be working with long form data frames in R. This means that each row represents an independent sampling unit (i.e., person, plot, rat, etc.) and each column represents a different variable (e.g. factor or covariate).  
+
+Let's look at an example we are familiar with, the mouse weight data set from the text book. This dataframe shows the weight of male and female mice on a high fat and control diet. We'll first import those data and then take a look at how the data frame is formatted. 
+
+```{r}
+library(RCurl)
+
+# import the mice_pheno data set
+pheno <- read.csv(text=getURL("https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/mice_pheno.csv"))  #read.csv("mice_pheno.csv")
+
+# look at the first few rows of the dataframe to understand the structure
+head(pheno)
+
+# look at the structure of the object to see the specifics
+str(pheno)
+```
+
+These data are structured such that each row represents one mouse, and each column represents a variable: the first variable is a factor on the nominal scale (2 possible values M or F); second is another factor on the nominal scale (2 possible values chow or hf); third is the response variable on the ratio scale. Each cell corresponds to the variable value of the mouse in that particular row. For example, pheno[3,2] tells us the diet fed to mouse 3, pheno[3,3] tells us the weight of that mouse, etc.
+
+```{r}
+pheno[3,2]
+```
+
+Notice that there isn't a "male" column and a "female" column containing bodyweights corresponding to each male or female mouse. Although this is a common manner of data input for small data sets in excel, it obscures clear thinking about sampling units and variables by leading the reader to believe that there are either two variables (male and female) or maybe even two sets of sampling units (male and female). Neither is correct. There is one dataset for the study, and each sampling unit has a specific value of the variable "sex".
+
+***
+
+#####Sampling terms and inferential limits
+
+One common mistake in science is drawing conclusions that are not justified based on a study's sampling design. To understand the inferential limits of a scientific study, we need to understand the sampling design. 
+
+The *sampling unit* is the independent entity that will be sampled during the study. It could be a plot of land, geographic region, person, rat, hospital. This is an important concept as it defines your sample size and unit of replication (in most cases). 
+
+The *inferential population* is the full set of possible sampling units from which the sample was drawn. It could be a mountain that contains many $5m^2$ plots, a set of test scores from three years of testing in a school district, rats available for order from Jackson's, birds breeding in Cozumel, people in a phone book, or a list of hospitals in a particular state. Note that this is generally distinct from the *target population*, which is usually more inclusive than the inferential population and the level at which we would ideally like to answer our question (e.g., all rats, all people, all birds, all hospitals). 
+
+Let's think about the mouse weight data set as an example. Although the text doesn't tell us where the mice came from, it's probably safe to assume that they were purchased from a supply company. What's our sampling unit? Well, in this case we are recording sex, diet, and bodyweight for each individual mouse, so our sampling unit is the mouse. And although we might wish to make inferences about *all* mice, our target population, we are limited to making inference about the mice from the supply company (and, if they are of a particular genetic strain, we are further limited to inference about that strain from the supply company).
+
+**Food for thought** The sampling unit may not be the entity we measure. For example, if we measure the fluorescence for 5000 cells in each of three different petri dishes, and each petri dish represents a replicate cell culture, our sampling unit would be the dish and not the individual cell (i.e. n is 3, not 15,000). 
+
+****
+
+You will be using information from your graduate research project to complete this lab. Remember that each person will turn in their own submission.
+
+#####Question 1
+
+State your research question(s).   
+  - Historic data from herbarium specimens are used to define species distribution models. However there are several sources of error in the spatial information contained in data agregators (such as GBIF, SEINet, iDigBio). My aims are to (1) identify and quantify spatial error from the collection process and the digitization process and (2) quantify the extent of the error in relation to the scale of climatic factors used in distribution models.   
+
+#####Question 2
+
+a) Identify the variables necessary to address each research question posed above. If appropriate, identify which is the response and which are explanatory variables.  
+Quantifying Error 
+  - Explanatory variables:     
+    Year    
+    Herbarium  
+    Verbatum Label location information   
+    County  
+  - Response variables:    
+    Lat/lon reported  
+   
+Error affect on SDM    
+  - Explanatory variables:  
+    Now: Raw location data, simulate locations given error seen in part one by herbarium (local or distant) and by year   
+    Later: Bioclim variables (constant subset of precip and temp across species) at 30 second scale
+  - Response variables:  
+    Now: variance of raw data greater than or less than 30 second grids. 
+    Later: species Distribution Model given set cutoff - distribution across lat and elevation, total area above cutoff
+    
+    
+
+b) What is the scale of each variable?  
+Interval: Year, lat, lon, bioclim data, elevation  
+Nominal: Herbarium, Verbatum Label info, County, Herbarium type (local vs. distant) 
+
+#####Question 3
+
+a) Create a data frame in excel using the principles discussed above, and populate it with either your data or with made-up realistic values. Import it into R, and use the str() function to show the structure of your data frame.  
+```{r}
+load("P:/hackathon/Simulations/collectionsg1g2.Rda")
+
+collg1g2sm <- collectionsg1g2[,c(1,3,15:24,60:109)]
+str(collg1g2sm)
+
+``` 
+
+b) Save your data frame as a .Rda file. This is a good habit to get into as it stores your data in a manner that is stable and more challenging to edit, which means making accidential changes to your data is tougher to do. It's also useful for collaboration, reproducability.
+```{r}
+save(collg1g2sm,file="P:/My Documents/BDA_Spring2018/collg1g2sm.Rda")
+
+```
+
+
+#####Question 4
+
+a) What is your sampling unit? Target population? Inferential population? Explain how your sampling design determines the sampling unit and the inferential population.  
+  - Sampling unit: herbarium collection represented as a row in in the data frame. 
+  - Target population: herbarium collections  
+  - Inferential population: Colorado plant species  
+  - I am examining the error that lead to spatial coordinates for each herbarium specimen pulled from all digitized plant collections reported to SEINet. I selected the G1/G2 species because there are defined ranges for these species based on field observations, not based on herbarium specimens. Herbarium collections are generally made over areas, not by taxonomic group so my sampling of rare colorado plants should allow for inference over all Colorado plants.    
+
+b) Does your sampling frame allow you to make inference about your target population? Explain. How will you frame your inference when presenting your results? In other words, to what population do your samples allow you to make inference?
+
+
+**For your final submission, please upload your knitted .html file and your .Rda file.**
+
