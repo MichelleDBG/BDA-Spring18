@@ -10,7 +10,38 @@ output:
 ---
 
 ##### Inferential Plots
-Q1. Recreate the last figure in the demo (the plots with error bars) and read the papers on canvas. Use those papers and the equations for SD, SE, and CI to answer the following:
+Q1. Recreate the last figure in the demo (the plots with error bars) and read the papers on canvas. Use those papers and the equations for SD, SE, and CI to answer the following:   
+    
+Now make the plots to compare differences among SD, SE, and CI
+```{r,comment=FALSE}
+# make components accessible to the search path
+#attach(hsum)
+load("P:/My Documents/BDA_Spring2018/hsum.Rda")
+# we'll make 3 plots - SD, SE, and CI
+par(mfrow=c(1,3))
+# plot standard deviation bars for description
+yax<-range(c(hsum$height-hsum$sd,hsum$height+hsum$sd))
+title<-expression("Mean Height "%+-%" SD")
+par(mar=c(3,4,2,1))
+stripchart(hsum$height~hsum$sex,vertical=T,xlim=c(0.5,2.5),ylim=yax,
+           pch=19,xlab="",ylab="Height (in)",main=title)
+arrows(c(1,2),hsum$height-hsum$sd,c(1,2),hsum$height+hsum$sd,length=0.05,angle=90,code=3)
+# plot standard error bars for inference
+par(mar=c(3,1,2,1))
+#yax<-range(c(height-se,height+se))
+title<-expression("Mean Height "%+-%" SE")
+stripchart(hsum$height~hsum$sex,vertical=T,xlim=c(0.5,2.5),ylim=yax,
+           pch=19,xlab="",ylab="",yaxt="n",main=title)
+arrows(c(1,2),hsum$height-hsum$se,c(1,2),hsum$height+hsum$se,length=0.05,angle=90,code=3)
+# plot 95% CI for inference
+par(mar=c(3,1,2,1))
+#yax<-range(c(height-ci,height+ci))
+title<-expression("Mean Height "%+-%" 95% CI Limit")
+stripchart(hsum$height~hsum$sex,vertical=T,xlim=c(0.5,2.5),ylim=yax,
+           pch=19,xlab="",ylab="",yaxt="n",main=title)
+arrows(c(1,2),hsum$height-hsum$ci,c(1,2),hsum$height+hsum$ci,length=0.05,angle=90,code=3)
+```
+
 
 a. How do the error bar types compare to each other, and how do they depend on sample size?   
   - The first, standard deviation, is the variance of the data. The second, standard error, shows the variance in the estimate of the summary statisitc, the sample mean. The final plot, the confidence interval, shows the range in which would hold the sample mean 95% of the time. If the data is normally distributed, the standard deviation would be smaller as the density of data would increase near the sample mean with a larger sample size. The standard error is based on the sample size so an increase in sample size will decrease the standard error. The confidence interval will follow the reduction in variance in calculating the summary statistic and shrink as the sample size increases.    
