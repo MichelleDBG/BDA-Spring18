@@ -53,3 +53,8 @@ By as early as 1988, over 300 medical and biomedical journals had notified the I
 
 **"When possible, quantify findings and present them with appropriate indicators of measurement error or uncertainty (such as confidence intervals). Avoid sole reliance on statistical hypothesis testing, such as the use of p values, which fail to convey important quantitative information"**"
 
+```{r}
+
+
+```
+

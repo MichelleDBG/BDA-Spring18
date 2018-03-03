@@ -1,12 +1,12 @@
 ---
 title: "Lab 4 - formatting data and inferential limits"
 output:
+  html_document: default
+  html_notebook: default
   pdf_document:
     fig_caption: yes
     fig_height: 4
     fig_width: 5
-  html_notebook: default
-  html_document: default
 ---
 
 ####*What to do with all this data...*
@@ -74,22 +74,24 @@ Quantifying Error
     Herbarium  
     Verbatum Label location information   
     County  
-  - Response variables:    
-    Lat/lon reported  
+    Lat/lon reported   
+  - Response variables:   
+    Distance from nearest Element Occurance Record Polygon
    
-Error affect on SDM    
+Error effect on SDM    
   - Explanatory variables:  
-    Now: Raw location data, simulate locations given error seen in part one by herbarium (local or distant) and by year   
-    Later: Bioclim variables (constant subset of precip and temp across species) at 30 second scale
+    - Now: mean and standard deviations of error - i.e. binomial distribution of correct (within a EOR polygon) vs. probability of being wrong (outside a known EOR polygon) and the subsequent distribution of distance from a known polygon.   
+    (My notes: Raw location data, simulate locations given error seen in part one by herbarium, local or distant, and by year. Is the error process different over time or by the group of regional herbaria with more local knowledge vs. out of state collectors)    
+    - Later: Bioclim variables (constant subset of precip and temp across species) at 30 second scale   
   - Response variables:  
-    Now: variance of raw data greater than or less than 30 second grids. 
-    Later: species Distribution Model given set cutoff - distribution across lat and elevation, total area above cutoff
+    - Now: Which category has variance of raw data greater than or less than 30 second grids. 
+    - Later: species Distribution Model given set cutoff - distribution across lat and elevation, total area above cutoff
     
     
 
 b) What is the scale of each variable?  
-Interval: Year, lat, lon, bioclim data, elevation  
-Nominal: Herbarium, Verbatum Label info, County, Herbarium type (local vs. distant) 
+Interval: Year, lat, lon, bioclim data, elevation (later: SDM envelope area, average elevation and latitude...)  
+Nominal: Herbarium, County, Herbarium type (local vs. distant), (later: Verbatum Label info - to break by what was known to map the specimen) 
 
 #####Question 3
 
@@ -112,12 +114,13 @@ save(collg1g2sm,file="P:/My Documents/BDA_Spring2018/collg1g2sm.Rda")
 #####Question 4
 
 a) What is your sampling unit? Target population? Inferential population? Explain how your sampling design determines the sampling unit and the inferential population.  
-  - Sampling unit: herbarium collection represented as a row in in the data frame. 
-  - Target population: herbarium collections  
-  - Inferential population: Colorado plant species  
-  - I am examining the error that lead to spatial coordinates for each herbarium specimen pulled from all digitized plant collections reported to SEINet. I selected the G1/G2 species because there are defined ranges for these species based on field observations, not based on herbarium specimens. Herbarium collections are generally made over areas, not by taxonomic group so my sampling of rare colorado plants should allow for inference over all Colorado plants.    
+  - Sampling unit: A herbarium collection represented as a row in in the data frame. 
+  - Target population: herbarium collections of rare G1/G2 plant species  
+  - Inferential population: All Colorado herbarium collections (plant specimens)  
+  - I am examining the error that lead to spatial coordinates for each herbarium specimen pulled from all digitized plant collections reported to SEINet. I am sampling all digitized herbarium collections from herbaria participating in the SEINet data portal. I selected the G1/G2 species because there are defined mapped ranges for these species based on field observations, not based on herbarium specimens. Herbarium collections are generally made over areas, not by taxonomic group so my sampling of rare colorado plants should allow for inference over all Colorado plants. More broadly, error rates of digitization will differ over areas with smaller counties (or regional named areas) and varying histories of location names and changes.     
 
-b) Does your sampling frame allow you to make inference about your target population? Explain. How will you frame your inference when presenting your results? In other words, to what population do your samples allow you to make inference?
+b) Does your sampling frame allow you to make inference about your target population? Explain. How will you frame your inference when presenting your results? In other words, to what population do your samples allow you to make inference?   
+  - My sampling frame (rare G1/G2 plants across Colorado) is not a random sample of all Colorado plant species. My target populaiton, rare G1/G2 Colorado plants, have been sampled with great bias. I'm using all avaliable digitized collections of those species. I can frame my results as an example of one extreme, spatial error given species with defined and sometimes small ranges. A similar process in error generation will exist for all Colorado plant species but detection of spatial error in common species will be different. 
 
 
 **For your final submission, please upload your knitted .html file and your .Rda file.**

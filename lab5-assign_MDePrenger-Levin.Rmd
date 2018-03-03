@@ -1,0 +1,94 @@
+---
+title: "Lab 5 - EDA and plotting with R"
+output:
+  pdf_document:
+    fig_caption: yes
+    fig_height: 4
+    fig_width: 6
+  html_notebook: default
+  html_document: default
+---
+
+##### Inferential Plots
+Q1. Recreate the last figure in the demo (the plots with error bars) and read the papers on canvas. Use those papers and the equations for SD, SE, and CI to answer the following:
+
+a. How do the error bar types compare to each other, and how do they depend on sample size?   
+  - The first, standard deviation, is the variance of the data. The second, standard error, shows the variance in the estimate of the summary statisitc, the sample mean. The final plot, the confidence interval, shows the range in which would hold the sample mean 95% of the time. If the data is normally distributed, the standard deviation would be smaller as the density of data would increase near the sample mean with a larger sample size. The standard error is based on the sample size so an increase in sample size will decrease the standard error. The confidence interval will follow the reduction in variance in calculating the summary statistic and shrink as the sample size increases.    
+
+b. When would you use standard deviations for errors bars?   
+  - I would use the standard deviations if I were describing the sample data. 
+  
+c. When would you use standard errors for errors bars?   
+  - I would use standard errors as error bars around a summary statistic to show how much error when calculating the summary statistic.   
+
+d. When would you use confidence intervals for errors bars?   
+  - I would use a confience interval to show how much variation is expected in the summary statistic. It would show the values range within which the summary statistic would be expected to fall in that particular percent of the time.   
+
+##### Practice with plots
+Q2. Modify the code in the demo that shows how to add marginal histograms to a scatterplot as follows:
+
+a. show the bivariate distribution of father and son heights   
+```{r}
+data(father.son, package = "UsingR")
+
+plot(father.son$fheight,father.son$sheight,
+     xlab="Father height", ylab="Son Height")
+```
+
+b. use the lines() function to add density curve histograms to the margins (rather than the binned histograms shown in the demo)   
+```{r}
+op <- par(no.readonly = TRUE)
+xhist <- hist(father.son$fheight, plot = FALSE) # define histogram for x variable
+yhist <- hist(father.son$sheight, plot = FALSE) # define for the y variable
+top <- max(c(xhist$counts, yhist$counts))
+nf <- layout(matrix(c(2,0,1,3),2,2,byrow = TRUE),
+             width=c(6,1), height=c(1,4), TRUE)
+par(mar = c(4,4,1,1)) # set margins for first plot
+plot(father.son$fheight, father.son$sheight, xlab=expression(italic("Father Height (inch)")), pch=16,
+     ylab=expression(italic("Son Height (inch)")))
+par(mar = c(0,4,1,1)) # set top plot margins
+plot(xhist$density, type='n', axes=FALSE, ylab="", xlab="")
+lines(xhist$density,main="",ylab="",xlab="",
+      ylim=c(0,150))
+par(mar = c(4,0,1,1)) # set side plot margins
+# sideways histograms are trickier
+# use hist output in barplot, remove space between bars (space=0)
+plot(yhist$density, axes = FALSE, type='n', xlim=c(0, max(yhist$counts)),
+     ylim = c(range(yhist$breaks)), ylab="",xlab="")
+lines(yhist$density, main="", ylab="",
+     xlab="")
+par(op)
+```
+
+c. make sure the labels in your new plot are correct
+
+##### QQ plots and tests
+Q3. Use the father height data to answer the following questions
+
+a. Reference the plot you made in Q1 and decide whether you think the data are normally distributed. Explain your reasoning.
+
+b. Generate a QQ plot for the father height data and decide whether you think the data are normally distributed. Explain your reasoning   
+```{r}
+scatterplotMatrix(~fheight+sheight, 
+                 diagonal = "qqplot",
+                 data=father.son,
+                 reg.line=FALSE,
+                 smoother="")
+
+ks.test(father.son$fheight, father.son$sheight)
+```
+  
+The father and son heights are normally distributed. The data points follow the expected quantiles with symmetry at the tails (slightly above at one end, below at the other). It is very unlikely that the two distbutions are different 
+   
+c. Use a KS goodness of fit test to a normal distribution to decide whether the father height data are normally distributed. Explain your reasoning.  
+```{r}
+ks.test(father.son$fheight, pnorm)
+
+```
+   
+The probabililty that the distribution of the father heights differ from a normal distribution is very low.   
+
+d. Reconcile your decisions and write a short paragraph explaining how you might use your results above to determine whether your data meet the assumption of normality. Feel free to modify the plotting parameters and to show the data using different types of plots to help explain your reasoning.
+
+e. If you decided that the data are not normally distributed, how might you summarize these data in a paper?
+
