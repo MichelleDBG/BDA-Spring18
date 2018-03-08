@@ -1,13 +1,15 @@
 ---
 title: "Lab 5 - EDA and plotting with R"
 output:
+  html_document: default
+  html_notebook: default
   pdf_document:
     fig_caption: yes
     fig_height: 4
     fig_width: 6
-  html_notebook: default
-  html_document: default
 ---
+
+Pers.comm. Liam C.
 
 ##### Inferential Plots
 Q1. Recreate the last figure in the demo (the plots with error bars) and read the papers on canvas. Use those papers and the equations for SD, SE, and CI to answer the following:   
@@ -47,13 +49,13 @@ a. How do the error bar types compare to each other, and how do they depend on s
   - The first, standard deviation, is the variance of the data. The second, standard error, shows the variance in the estimate of the summary statisitc, the sample mean. The final plot, the confidence interval, shows the range in which would hold the sample mean 95% of the time. If the data is normally distributed, the standard deviation would be smaller as the density of data would increase near the sample mean with a larger sample size. The standard error is based on the sample size so an increase in sample size will decrease the standard error. The confidence interval will follow the reduction in variance in calculating the summary statistic and shrink as the sample size increases.    
 
 b. When would you use standard deviations for errors bars?   
-  - I would use the standard deviations if I were describing the sample data. 
+  - I would use the standard deviations if I were describing the sample data. and sample dta distribution
   
 c. When would you use standard errors for errors bars?   
   - I would use standard errors as error bars around a summary statistic to show how much error when calculating the summary statistic.   
 
 d. When would you use confidence intervals for errors bars?   
-  - I would use a confience interval to show how much variation is expected in the summary statistic. It would show the values range within which the summary statistic would be expected to fall in that particular percent of the time.   
+  - I would use a confidence interval to show how much variation is expected in the summary statistic and within what range I would expect a summary statistic from a repeated sample to fall. It would show the value range within which the summary statistic would be expected to fall that percent of the time (i.e. 95% of the time within a 95%CI).    
 
 ##### Practice with plots
 Q2. Modify the code in the demo that shows how to add marginal histograms to a scatterplot as follows:
@@ -83,11 +85,17 @@ lines(xhist$density,main="",ylab="",xlab="",
       ylim=c(0,150))
 par(mar = c(4,0,1,1)) # set side plot margins
 # sideways histograms are trickier
-# use hist output in barplot, remove space between bars (space=0)
-plot(yhist$density, axes = FALSE, type='n', xlim=c(0, max(yhist$counts)),
-     ylim = c(range(yhist$breaks)), ylab="",xlab="")
-lines(yhist$density, main="", ylab="",
-     xlab="")
+# use hist output in barplot, remove space between bars (space=0)  
+#barplot(yhist$density, horiz=TRUE)
+plot(yhist$density, seq(from=min(yhist$breaks),
+                        to=max(yhist$breaks),
+                        length.out=length(yhist$density)),
+     axes = FALSE,  type='n', ylab="",xlab="", main="")
+lines(yhist$density, seq(from=min(yhist$breaks),
+                        to=max(yhist$breaks),
+                        length.out=length(yhist$density)))
+#hist(father.son$sheight, horiz=TRUE, ylim=c(0,max(yhist$density)))
+#lines(yhist$density, main="", ylab="",  xlab="")
 par(op)
 ```
 
@@ -97,29 +105,119 @@ c. make sure the labels in your new plot are correct
 Q3. Use the father height data to answer the following questions
 
 a. Reference the plot you made in Q1 and decide whether you think the data are normally distributed. Explain your reasoning.
+  - Based on the density plot, both the fathers' and sons' distribution appear normally distributed. 
 
 b. Generate a QQ plot for the father height data and decide whether you think the data are normally distributed. Explain your reasoning   
 ```{r}
+#cheating and making both with scatterplotMatrix:
+library(car)
 scatterplotMatrix(~fheight+sheight, 
                  diagonal = "qqplot",
                  data=father.son,
                  reg.line=FALSE,
                  smoother="")
 
-ks.test(father.son$fheight, father.son$sheight)
+
+ks.test(father.son$fheight, father.son$sheight) # Are they the same distribution as each other? Appears no, low probability (D = 0.15, p < 0.001) that the father and son heights are the same. Test says that one-sided: the null hypothesis is that the supplied data distribution (x) came from the named distribution (y; or another supplied distriubtion/sample data distribution == two-sided). Treating the supplied data as a continuous distribution to test so can't have ties. 
+```
+
+```{r}
+#What was asked for in 1b:
+#qqplot(father.son$fheight, rnorm(mean(father.son$fheight), sd(father.son$fheight)))
+
+qqnorm(father.son$fheight)
+qqline(father.son$fheight)
+
+
 ```
   
-The father and son heights are normally distributed. The data points follow the expected quantiles with symmetry at the tails (slightly above at one end, below at the other). It is very unlikely that the two distbutions are different 
+The father and son heights are normally distributed. The data points follow the expected quantiles with symmetry at the tails (slightly above at one end, below at the other). However, the Kolmogorov-Smirnov Test shows a very small probability that the father height data distribution is the same as (or could come from) the son height data distribution (Kolmogorov-Smirnov Test: D = 0.15, p < 0.001). 
    
-c. Use a KS goodness of fit test to a normal distribution to decide whether the father height data are normally distributed. Explain your reasoning.  
+c. Use a KS goodness of fit test to a normal distribution to decide whether the father height data are normally distributed. Explain your reasoning.  
 ```{r}
 ks.test(father.son$fheight, pnorm)
-
 ```
    
-The probabililty that the distribution of the father heights differ from a normal distribution is very low.   
+The probabililty that the sample distribution of the father heights is a normal distribution is very low. A one-sample Kolmogorov-Smirnov test (D=3.6, p-value < 0.001) indicates a low probability that the father height data is drawn from a normal distribution.    
 
-d. Reconcile your decisions and write a short paragraph explaining how you might use your results above to determine whether your data meet the assumption of normality. Feel free to modify the plotting parameters and to show the data using different types of plots to help explain your reasoning.
+d. Reconcile your decisions and write a short paragraph explaining how you might use your results above to determine whether your data meet the assumption of normality. Feel free to modify the plotting parameters and to show the data using different types of plots to help explain your reasoning. 
+```{r, eval=FALSE}
 
-e. If you decided that the data are not normally distributed, how might you summarize these data in a paper?
+x <- c(rnorm(seq(0.01,0.99,0.01),
+               mean=mean(father.son$fheight),
+               sd=sd(father.son$fheight)),
+             runif(seq(0.01,0.99,0.01),
+               min=min(father.son$fheight),
+               max=max(father.son$fheight)))
+plot(density(x))
+lines(density(father.son$fheight),col="blue")
+
+ks.test(father.son$fheight, pnorm)
+ks.test(father.son$fheight, punif)
+ks.test(father.son$fheight, x)
+
+#Cumulative Distribution Function from kernel density estimate
+library(spatstat)
+distfuncfather <- CDF(density(father.son$fheight))
+
+#hist(rnorm(mean(father.son$fheight), sd(father.son$fheight)), 
+ #    ylab = "assuming normal")
+
+
+
+hist(father.son$fheight)
+rug(father.son$fheight)
+
+#sample size
+nrow(father.son) #1078, large sample
+```
+
+```{r}
+xhist <- hist(father.son$fheight, plot = FALSE) # define histogram for x variable
+yhist <- hist(father.son$sheight, plot = FALSE) # define for the y variable
+top <- max(c(xhist$counts, yhist$counts))
+nf <- layout(matrix(c(2,0,1,3),2,2,byrow = TRUE),
+             width=c(6,1), height=c(1,4), TRUE)
+par(mar = c(4,4,1,1)) # set margins for first plot
+plot(father.son$fheight, father.son$sheight, xlab=expression(italic("Father Height (inch)")), pch=16,
+     ylab=expression(italic("Son Height (inch)")))
+par(mar = c(0,4,1,1)) # set top plot margins
+barplot(xhist$density, xaxes=FALSE, ylab="", xlab="")
+#lines(xhist$density,main="",ylab="",xlab="",
+#      ylim=c(0,150))
+par(mar = c(4,0,1,1)) # set side plot margins
+# sideways histograms are trickier
+# use hist output in barplot, remove space between bars (space=0)  
+barplot(yhist$density, horiz=TRUE)
+#plot(yhist$counts, seq(from=min(yhist$breaks),to=max(yhist$breaks),length.out=length(yhist$density)),axes = FALSE,  type='l',ylab="",xlab="", main="")
+#hist(father.son$sheight, horiz=TRUE, ylim=c(0,max(yhist$density)))
+#lines(yhist$density, main="", ylab="",  xlab="")
+par(op)
+
+```
+```{r, eval=FALSE}
+#bins based on son height breaks
+for(i in yhist$breaks){
+  father.son$bin[father.son$sheight>=i&
+                   father.son$sheight<(i+2)] <- i
+}
+library(ggplot2)
+ggplot(father.son, aes(sheight, fheight, group=bin))+
+  geom_boxplot()+
+#  facet_wrap(~bin)+
+  theme_bw()+
+  coord_flip()
+  
+sapply(split(father.son, father.son$bin), function(bin){
+  ks.test(bin$fheight, pnorm)
+})
+
+ks.test(father.son$sheight, pnorm)
+```
+
+  - The density plot and a qqplot of the father height data appears qualitatively normally distributed. The KS goodness of fit test shows that there is a low probability that the distribution is normal (D = 1, p-value < 0.001) and the KS goodness of fit of the father height data compared to son heights show a low probability that the two data samples are from the same distribution (D = 0.15, p-value < 0.001). The qqplot also behaves like a uniform distribution. However, there is a low probability that the distribution is uniform (KS goodness of fit D=1, p<0.001).   
+
+e. If you decided that the data are not normally distributed, how might you summarize these data in a paper?   
+  - The father height is not likely normally distributed (KS goodness of fit test, D = 1, p < 0.001) nor is it uniformly distibuted (D = 1, p < 0.001). However the qqplot looks like the data is either normally or uniformly distributed. The father height appears normally distributed across most son heights and across the sample distribution but with more variance than expected and with a slight second peak. 
+
 
