@@ -207,14 +207,30 @@ d. matrix(c(-2,3,1,-2),2,2)
 
 ***  
 
-Consider the dataset d: data.frame(x=c(-0.2,-1.5,-0.5,0.4,1.4,0.4,-1.4),y=c(3.0,6.3,5.2,2.8,-0.3,2.8,5.5))
+Consider the dataset d: 
+```{r}
+df1 <- data.frame(x=c(-0.2,-1.5,-0.5,0.4,1.4,0.4,-1.4),y=c(3.0,6.3,5.2,2.8,-0.3,2.8,5.5))
+```
 
-Q3. Write the system of linear equations to describe the linear regression of y on x in d. Hint: you will be using the numbers given above.
+Q3. Write the system of linear equations to describe the linear regression of y on x in d. Hint: you will be using the numbers given above.   
+```{r}
+noquote(paste(df1$y,"=",df1$x, "+E", sep=""))
 
-Q4. Write the same system using matrix notation. Hint: you will have a y-matrix, and x-matrix, and a beta-matrix.
+```
 
+
+
+Q4. Write the same system using matrix notation. Hint: you will have a y-matrix, and x-matrix, and a beta-matrix.   
+<!-- __$\bar{y}$__ = __$\bar{x}$__ + $\varepsilon$     -->
+__$\bar{y}$__ = __x__ $\bar{\beta_0}$
+ 
 ***
 
-Q5. Fetch the mice weight data. e.g. mice <- read.csv("femaleMiceWeights.csv"). Make the y vector from the bodyweights and build the X matrix for the two diets. Do this in R and show each matrix (y and X).
+Q5. Fetch the mice weight data. e.g. mice <- read.csv("femaleMiceWeights.csv"). Make the y vector from the bodyweights and build the X matrix for the two diets. Do this in R and show each matrix (y and X).  
+```{r}
+
+
+``` 
+
 
 Q6. Use solve() to find and interpret the $\hat{\beta}'s$ and compare with results from lm()

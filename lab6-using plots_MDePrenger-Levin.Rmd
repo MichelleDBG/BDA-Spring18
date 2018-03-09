@@ -1,0 +1,221 @@
+---
+title: "Lab 6 - interpreting data plots"
+output:
+  html_document: default
+  html_notebook: default
+  pdf_document:
+    fig_caption: yes
+    fig_height: 4
+    fig_width: 6
+---
+
+#### Using Plots for communication and inference
+
+Let's walk through some examples in the textbook to start. I've just copied the code to make the set of figures for the before/after data and labeled the figures for reference in the questions that follow.
+
+```{r}
+set.seed(12201970)
+# ... on what date do you suppose the author of the text was born?
+before <- runif(6, 5, 8)
+after <- rnorm(6, before*1.05, 2)
+li <- range(c(before, after))
+ymx <- max(abs(after-before))
+```
+
+Here's the first figure:
+
+```{r}
+plot(before, after, xlab = "before", ylab = "after", ylim = li, 
+     xlim = li, main = "Figure 1")
+abline(0, 1, lty = 2)
+```
+
+And now the second:
+
+```{r}
+plot(before, after-before, xlab = "before", ylim = c(-ymx, ymx), 
+     ylab = "change (after-before)", lwd = 2, main = "Figure 2")
+abline(h = 0, lty=2)  
+
+# The difference between the after and the before (Y) along every before (X)
+```
+
+The third:
+
+```{r}
+z <- rep(c(0,1), rep(6,2))
+plot(z, c(before, after), xaxt = "n", ylab = "response",
+     xlab = "", xlim = c(-0.5,1.5), main = "Figure 3")
+axis(side = 1, at = c(0,1), c("before","after"))
+segments(rep(0,6), before, rep(1,6), after)
+
+# Paired before values and the after values with lines
+```
+
+... and finally the fourth:
+
+```{r}
+boxplot(before, after, ylab = "response", names = c("before","after"),
+        main = "Figure 4")
+
+# Not paired, distribution of before compared to after
+```
+
+***
+
+Q1. Of the 4 figures, which one(s) treat the before and after data as independent observations (i.e. a random sample of measures from the "before" condition and a random sample of measures from the "after" condition)? Explain.   
+  - The boxplot is the only one that shows the distribution of each of the two independent samples of responses. 
+
+Q2. Which figure(s) treat the before and after data as dependent (i.e. treats them as repeated measures)? Explain.  
+  - The first treats after as dependent on the before condition. The second treats the after as dependent on the before condition but visually rotates to show the difference (Y-X) along a horizontal (y=0) instead of a y=x line. The third plot also shows the slope of each line dependent on the before to after condition.  
+
+Q3. Suppose these data were in fact repeated measures. From your perspective, which of the figures does the best job of explaining the data? In explaining your reasoning, be sure to describe the comparative strengths and weaknesses of the various plots.  
+  - The thrid line plot shows the change of each individual from the before to after (as a repeated measure of each) but as the sample size increases, that type of plot will be a solid block of lines and uniformative. Even with a small sample size, the magnitude and directional pattern overall is hard to see and interpret. The first plot is slightly better showing the number of times the after condition increases (is greater than the y=x line) and decreases (less than the y=x line). Figure 2 is the easiest to see the direction and magnitude of each change from before to after.   
+  Figure 4 shows no comparison of them being repeated measures. 
+
+****
+
+Plots for means are farily straightforward. Adding error bars is easy as well using the segments() function (or the arrows() function). We saw one way to use segments() in plot 3 above. But it's of course much more flexible, and we want to use it to generate error bars. Take a look at what arguments segments() requires (i.e. type ?segments).
+
+To illustrate how to make error bars, let's generate some data and render an example plot. Take the x values to be time, for example, and the y values to be the means of some variable measured over time. The variable ciHw is the half-width of a 95% confidence interval for the means. It's the same value for each of the time-specific means in this case, but it doesn't have to be. OK, now the mock data and the plot:
+
+```{r}
+x <- 1:10
+y <- 1:10+rnorm(10,0,0.5)
+ciHw <- 0.5
+plot(x,y, ylim=c(min(y)-2*ciHw,max(y)+2*ciHw),pch=16,cex=0.75)
+segments(x,y,x,y+ciHw)
+segments(x,y,x,y-ciHw)
+```
+
+Pretty easy yes? And a nice professional looking style.
+
+***
+
+Now let's consider a design that includes repeated measures over time. To do this, let's simulate data to represent results for an experiment that included a single control group and a single treatment group. The response was measured for each subject over time (at days 1, 5 and 10). There were 6 different subjects, three in the treatment group and three in the control group. Notice that we have three variables here: treatment (nominal scale, two levels: control, treatment), subject (nominal scale, 6 levels: arbitrary subject labels), and response (interval scale).
+
+```{r}
+set.seed(4532)
+dat1 <- data.frame(time=rep(c(1,5,10),6),trt=c(rep("ctrl",9),rep("trt",9)),
+                   response=c(rep(c(59,84,123),3)+rnorm(9,0,2.3),
+                              rep(c(62,73,65),3)+rnorm(9,0,2.9)),
+                   subject=factor(c(1,1,1,2,2,2,3,3,3,4,4,4,5,5,5,6,6,6)))
+plot(dat1$time,dat1$response,type="n", xlab="time (days)", ylab="response",main="")
+for(i in 1:3) {
+  lines(dat1$time[dat1$subject==i],dat1$response[dat1$subject==i],col="blue")
+}
+for(i in 4:6) {
+  lines(dat1$time[dat1$subject==i],dat1$response[dat1$subject==i],col="red")
+}
+legend("topleft",col=c("blue","red"),lwd=2,c("Control","Treatment"))
+```
+
+We might want to simplify the figure by creating a plot of means for the three replicates of each treatment and control. aggregate() is a useful function for doing this kind of thing. It lets you aggregate the data by levels of a factor and apply a named function to the measures within each level. See ?aggregate for more information. We can use this function to find and collect the mean values for all the responses within the control and treatment groups at each time step as follows:
+
+```{r}
+grpTimeMeans <- aggregate(dat1$response, by=list(dat1$trt,dat1$time), FUN=mean)
+grpTimeMeans
+ctrlMeans <- grpTimeMeans[grpTimeMeans=="ctrl",3]
+trtMeans <- grpTimeMeans[grpTimeMeans=="trt",3]
+```
+
+With a little help, we can write some code to compute and store the endpoints of the t-based 95% CI half-widths around each mean:
+
+```{r}
+grpTimeSD <- aggregate(dat1$response, by=list(dat1$trt,dat1$time), FUN=sd)
+grpTimeSD
+ctrlSD <- grpTimeSD[grpTimeSD=="ctrl",3]
+trtSD <- grpTimeSD[grpTimeSD=="trt",3]
+ctrl95CI <- ctrlSD/sqrt(3)*qt(0.975,df=2) #sample size of 3, sample SE times the t-distribution quantiles 
+trt95CI <- trtSD/sqrt(3)*qt(0.975,df=2) # just the upper at the 2.5% beyond upper limit
+```
+
+****
+
+Q4. Explain the computation code to get the 95% CIs. What are the components of the computation, and why are they used?  
+  - First we get the group standard deviation for each treatment (nominal: ctrl or trt) and time (ordinal: time). Then take the standard deviations for each treatment (from the three repeated measures per treatment) at the three time steps and calculate the standard error (SD/sqrt(sample size)) at the upper t-distribution upper quantile (so that 2.5% of the distribution is above that value). 
+
+****
+
+Q5: Make a Plot!!  
+```{r}
+xctrl<-grpTimeMeans$Group.2[grpTimeMeans$Group.1=="ctrl"] #times for control
+yctrl <- grpTimeMeans$x[grpTimeMeans$Group.1=="ctrl"] #already "ctrlMeans"
+
+
+plot(xctrl,#grpTimeMeans$Group.2[grpTimeMeans$Group.1=="ctrl"],
+     grpTimeMeans$x[grpTimeMeans$Group.1=="ctrl"],pch=16,
+     ylim=c(min(yctrl)-ctrl95CI[1],
+            max(yctrl)+ctrl95CI[3]),
+     ylab="response",
+     xlab="Time (days)")
+
+points(grpTimeMeans$Group.2[grpTimeMeans$Group.1=="trt"]+.1,
+     grpTimeMeans$x[grpTimeMeans$Group.1=="trt"], pch=21)
+
+lines(grpTimeMeans$Group.2[grpTimeMeans$Group.1=="trt"]+.1,
+     grpTimeMeans$x[grpTimeMeans$Group.1=="trt"], lty=4)
+
+lines(grpTimeMeans$Group.2[grpTimeMeans$Group.1=="ctrl"],
+     grpTimeMeans$x[grpTimeMeans$Group.1=="ctrl"])
+
+
+xtrt<-grpTimeMeans$Group.2[grpTimeMeans$Group.1=="trt"]
+ytrt <- grpTimeMeans$x[grpTimeMeans$Group.1=="trt"]
+         
+segments(xctrl,yctrl,xctrl,yctrl+ctrl95CI)
+segments(xctrl,yctrl,xctrl,yctrl-ctrl95CI)
+
+#arrows(xctrl+.5,yctrl,xctrl+0.5,yctrl+ctrl95CI,col="blue", angle = 90, length=0.05)
+#arrows(xctrl+.5,yctrl,xctrl+0.5,yctrl-ctrl95CI,col="blue", angle = 90, length=0.05)
+
+segments(xtrt+0.1,ytrt,xtrt+0.1,ytrt+trt95CI)
+segments(xtrt+0.1,ytrt,xtrt+0.1,ytrt-trt95CI)
+
+legend("topleft", lty=c(4,1), legend = c("Treatment","Control"))
+```
+
+
+Use the output from the two calls to aggregate() above to make a plot that tracks the means for the control and treatment groups over time. Use the segments() function to add error bars that represent the 95% CI around each of the means. Your plot should loosely resemble Figure 7 in Cumming et al. (2007). Note that the pattern in the plot probably won't be the same, and don't worry about labeling each of the means. You should however, have similar structure in your plot: there should be two sets of connected dots, and each dot should have an error bar to represent the 95% CI based on the 3 different trials. Hint: Make sure to check out the set of options for plot (?plot). You may also want to render a plot for one of the series (ctrl or trt), then use points(), lines(), and segments() to add the other series and the error bars.
+
+Q6*. Based on the plot, can you compare the mean change for either group between 5 and 10 days? Explain. Hint: make sure to carefully read the assigned primary literature!!   
+  - Based on the plot, we cannot determine the sample size so the 95% confidence intervals don't nessecarily represent a range within which we would expect the true mean. The confidence intervals could be larger with a smaller sample size or smaller a larger sample size which is not reported or shown. The plot does not provide enough information to compare the mean change for either group (Cumming et al. 2007; pers. comm. Liam Cullinane) 
+
+```{r, echo=FALSE}
+plot(xctrl,
+     grpTimeMeans$x[grpTimeMeans$Group.1=="ctrl"],pch=16,
+     ylim=c(min(yctrl)-ctrl95CI[1],
+            max(yctrl)+ctrl95CI[3]),
+     ylab="response",
+     xlab="Time (days)",
+     main="Plot #2")
+
+points(grpTimeMeans$Group.2[grpTimeMeans$Group.1=="trt"]+.1,
+     grpTimeMeans$x[grpTimeMeans$Group.1=="trt"], pch=21)
+#stripchart(response~trt+I(time),data=dat1,pch=16,vertical=T,
+#           add=TRUE)
+points(jitter(dat1$time[dat1$trt=="ctrl"],0.15),dat1$response[dat1$trt=="ctrl"],
+       pch = 16, cex=0.75, col="grey")
+points(jitter(dat1$time[dat1$trt=="trt"],0.15)+0.1,dat1$response[dat1$trt=="trt"],
+       pch = 21, cex=0.75, col="grey10")
+
+lines(grpTimeMeans$Group.2[grpTimeMeans$Group.1=="trt"]+.1,
+     grpTimeMeans$x[grpTimeMeans$Group.1=="trt"], lty=4)
+lines(grpTimeMeans$Group.2[grpTimeMeans$Group.1=="ctrl"],
+     grpTimeMeans$x[grpTimeMeans$Group.1=="ctrl"])
+        
+segments(xctrl,yctrl,xctrl,yctrl+ctrl95CI)
+segments(xctrl,yctrl,xctrl,yctrl-ctrl95CI)
+segments(xtrt+0.1,ytrt,xtrt+0.1,ytrt+trt95CI)
+segments(xtrt+0.1,ytrt,xtrt+0.1,ytrt-trt95CI)
+
+legend("topleft", lty=c(4,1), legend = c("Treatment (n=3)","Control (n=3)"))
+```
+   
+  - Based on the first plot and assuming a appropirate sample size (which we know is too small, second plot) you would be lead to beleive that the treatment mean at day 10 (within its 95% confidence interval) falls within the 95% confidence interval of day 5 and indicates no change. You are lead to beleive that the control group mean at day 10 (contained by the 95% confidence interval) falls above the 95% confidence interval for the mean at day 5. However, the first plot gives no indication of sample size so we do not know how well, with what confidence, we can assume that the confidence interval contains the true mean. 
+  
+
+Q7*. Based on the plot, is there an effect of treatment over time? Explain. Be sure to properly interpet the error bars in justifying your answer.   
+  - Without the sample size, we have no way of knowing that you should or shouldn't have confidence that the confidence intervals describe the true mean.   
+  - In the absence of a reported sample size (n=3), the first plot is incorectly inflating confidence that there is an effect of treatment. 
+
