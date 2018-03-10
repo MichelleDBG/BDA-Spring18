@@ -179,7 +179,7 @@ legend("topleft", lty=c(4,1), legend = c("Treatment","Control"))
 Use the output from the two calls to aggregate() above to make a plot that tracks the means for the control and treatment groups over time. Use the segments() function to add error bars that represent the 95% CI around each of the means. Your plot should loosely resemble Figure 7 in Cumming et al. (2007). Note that the pattern in the plot probably won't be the same, and don't worry about labeling each of the means. You should however, have similar structure in your plot: there should be two sets of connected dots, and each dot should have an error bar to represent the 95% CI based on the 3 different trials. Hint: Make sure to check out the set of options for plot (?plot). You may also want to render a plot for one of the series (ctrl or trt), then use points(), lines(), and segments() to add the other series and the error bars.
 
 Q6*. Based on the plot, can you compare the mean change for either group between 5 and 10 days? Explain. Hint: make sure to carefully read the assigned primary literature!!   
-  - Based on the plot, we cannot determine the sample size so the 95% confidence intervals don't nessecarily represent a range within which we would expect the true mean. The confidence intervals could be larger with a smaller sample size or smaller a larger sample size which is not reported or shown. The plot does not provide enough information to compare the mean change for either group (Cumming et al. 2007; pers. comm. Liam Cullinane) 
+  - Based on the plot, we cannot determine the sample size so the 95% confidence intervals don't necessarily represent a range within which we would expect the true mean. We would use the difference in means based on the range we expect to contain the means (the confidence intervals) to determine if the mean has changed for eithe rgroup between 5 and 10 days. The confidence intervals could be larger with a smaller sample size or not representitve of the sample space or the CI could be smaller with a larger sample size and representtive of sample space. However, the sample size is not reported or shown. The plot does not provide enough information to compare the mean change for either group (Cumming et al. 2007; pers. comm. Liam Cullinane) 
 
 ```{r, echo=FALSE}
 plot(xctrl,
@@ -212,10 +212,11 @@ segments(xtrt+0.1,ytrt,xtrt+0.1,ytrt-trt95CI)
 legend("topleft", lty=c(4,1), legend = c("Treatment (n=3)","Control (n=3)"))
 ```
    
-  - Based on the first plot and assuming a appropirate sample size (which we know is too small, second plot) you would be lead to beleive that the treatment mean at day 10 (within its 95% confidence interval) falls within the 95% confidence interval of day 5 and indicates no change. You are lead to beleive that the control group mean at day 10 (contained by the 95% confidence interval) falls above the 95% confidence interval for the mean at day 5. However, the first plot gives no indication of sample size so we do not know how well, with what confidence, we can assume that the confidence interval contains the true mean. 
+
   
 
 Q7*. Based on the plot, is there an effect of treatment over time? Explain. Be sure to properly interpet the error bars in justifying your answer.   
+    - Based on the first plot and assuming a appropirate sample size (which we know is too small and is shown in the second plot) you would be lead to beleive that the treatment mean at day 10 (within its 95% confidence interval) falls within the 95% confidence interval of day 5 and indicates no change. You are lead to beleive that the control group mean at day 10 (contained by the 95% confidence interval) falls above the 95% confidence interval for the mean at day 5. However, the first plot gives no indication of sample size so we do not know how well, with what confidence, we can assume that the confidence interval contains the true mean. 
   - Without the sample size, we have no way of knowing that you should or shouldn't have confidence that the confidence intervals describe the true mean.   
   - In the absence of a reported sample size (n=3), the first plot is incorectly inflating confidence that there is an effect of treatment. 
 
