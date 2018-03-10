@@ -33,7 +33,7 @@ knitr::opts_chunk$set(cache = FALSE, warnings = FALSE, tidy = TRUE)
 
 Markov chain Monte Carlo algorithm takes a multivariate joint distribution and breaks it into a series of univariate, marginal distributions that can be approximated one at a time.  
 
-  1. I have measured the territory of _n_ = 15 bears roaming the front range foot hills and assumed their measured territory size y~i~ was normally distributed with a variance $\sigma$^2^~p~ = 10 km^2^. The average observed territory size in this study was $\mu$~y~ = 78.1 km^2^. Our study has a known [$\sigma$^2^~p~ | 78.1, 10]  
+  1. I have measured the (_change in _) territory of _n_ = 15 bears roaming the front range foot hills and assumed their measured territory size y~i~ was normally distributed with a variance $\sigma$^2^~p~ = 10 km^2^. The average observed territory size in this study was $\mu$~y~ = 78.1 km^2^. Our study has a known [$\sigma$^2^~p~ | 78.1, 10]  
   2. This study has been conducted before, and the researchers determined that the average territory was $\mu$~0~ = 70 km^2^ with variance $\sigma$^2^~0~ = 12km^2^.(The prior distribution from the previous study's observation)   
   3. We wish to update our knowledge of $\mu$, the unobservable average bears' territory with our new data in a Bayesian framework.
 
@@ -73,18 +73,50 @@ plot(density(y))
 
 ```
 
+From the N.T. Hobbs lab: 
+   "We have provided a function called `draw_mean` that 
+calculates the parameters of the posterior distributions for $\theta$ using a normal-normal conjugate relationship where the variance is assumed to be known. The function returns a draw from that distribution. Study the notes relative to this function."
+
+   "We provided a function called `draw_var` that
+calculates the parameters of the posterior distributions for $\varsigma^2$ using a inverse gamma-normal conjugate relationship where the mean is assumed to be known. The function returns a draw from that distribution."
+
+```{r, echo = TRUE, include = TRUE}
+
+draw_mean = function(mu_0, sigma.sq_0, varsigma.sq, y){
+	mu_1 =((mu_0 / sigma.sq_0 + sum(y)/varsigma.sq)) / 
+	  (1/sigma.sq_0 + length(y)/varsigma.sq)
+	sigma.sq_1 = 1/(1 / sigma.sq_0 + length(y) / varsigma.sq)
+	z = rnorm(1, mu_1, sqrt(sigma.sq_1))
+	param = list(z = z, mu_1 = mu_1, sigma.sq_1 = sigma.sq_1)
+	return(param)
+}
+
+# normal likelihood with gamma prior conjugate relationship for variance, assuming mean is known
+# alpha_0 is parameter of prior for variance
+# beta_0 is parameter of prior for variance
+# Note that this uses scale parameterization for inverse gamma
+
+draw_var = function(alpha_0, beta_0, theta, y){
+	alpha_1 = alpha_0 + length(y) / 2
+	beta_1 = beta_0 + sum((y - theta)^2) / 2
+	z = rinvgamma(1, alpha_1, scale = beta_1)
+	param = list(z = z, alpha_1 = alpha_1, beta_1 = beta_1)
+	return(param)
+}
+
+```
 
 
 
-
-Check the functions by simulating a large number of data points from a normal distribution using a mean and variance of your own choosing.  Store the data points in a vector called `y_check`.
+Check the functions by simulating a large number of data points from a normal distribution using a mean and variance of your own choosing.  Store the data points in a vector called `y_check`.  
+Can this joint distribution retrieve your mean and sigma? Simulate!
 ```{r, echo=key, include=key}
 check_mean=32; check_sigma = 3.2
 check_var=check_sigma^2
 n.draw=10000
 y_check=rnorm(n.draw,mean=check_mean,sd=check_sigma)
 
-var_vec = numeric(n.draw) #it already is numeric??
+var_vec = numeric(n.draw) # to make a numeric vector of length  equal to that of n.draw
 mean_vec = numeric(n.draw)
 
 for(i in 1:n.draw){
@@ -92,7 +124,8 @@ for(i in 1:n.draw){
   mean_vec[i] = draw_mean(0,10000,check_sigma^2,y_check)$z
 } 
 
-mean(var_vec) # just pulled out z which is rnorm(1 observation, mu_1 which is eq5 from our uninformative mu=0 and sigsq=10000, square root of sigma.sq_1??? why square root? )
+#Take the mean of the parameters (Kery 2010, Gelman & Hill 2009) 
+mean(var_vec) # just pulled out z which is rnorm(1 observation, mu_1 which is eq5 from our uninformative mu=0 and sigsq=10000, square root of sigma.sq_1) Know why square root? (R wants SD, not var)
 mean(mean_vec)
 
 ```
@@ -116,7 +149,8 @@ pmean = matrix(nrow = n.chains, ncol = n.iter)
 ```
 
 2. Assign initial values to the first column of each matrix, a different value for each of the chains. These can be virtually any value within the support of the random variable. 
-
+   
+To look for the fuzzy caterpillar! Need to start chains above, close to, and below the assumed mean. Hoping for convergence, that the variance among chains is less than the variance within one chain.          
 ```{r, echo = key, include = key}
 pmean[1:3, 1] =c (50, 20, 1) #selected 50, 20, 1 for first column of the three chains
 pvar[1:3, 1] = c(10, 5, .1) #pvar starting at 10, 5, and 0.1
@@ -155,7 +189,7 @@ lines(samplesKept, pmean[2, samplesKept], typ = "l", col = "red")
 lines(samplesKept, pmean[3, samplesKept], typ = "l", col = "green")
 ```
 
-2. For all chains combined, make a histogram of the samples of the mean retained after burn-in. Put a vertical line on the plot showing the generating value. 
+2. For all chains combined, make a histogram of the samples of the mean retained after burn-in. Put a vertical line on the plot showing the generating value.   
 
 ```{r, fig.widght = 6, fig.height = 5, fig.align = 'center', echo = key, include = key}
 hist(pmean[, samplesKept], breaks = 100, freq = FALSE, main = expression(theta), xlim = c(95, 105), xlab = "Value of MCMC samples", col = "gray")
@@ -163,7 +197,7 @@ lines(density(pmean[, samplesKept]), col = "red", lwd = 3)
 abline(v = theta, lty = "dashed", col = "blue", lwd = 4)
 ```
 
-3. Repeat steps 1-2 for the variance.
+3. Repeat steps 1-2 for the variance.   
 
 ```{r, fig.widght = 6, fig.height = 5, fig.align = 'center', echo = key, include = key}
 plot(samplesKept, pvar[1, samplesKept], typ = "l", ylab = expression(varsigma^2), xlab = "Iteration", col = "yellow")
@@ -175,7 +209,7 @@ lines(density(pvar[, samplesKept]), col = "red", lwd = 3)
 abline(v = varsigma.sq, lty = "dashed", col = "blue", lwd = 4)
 ```
 
-4. For both $\theta$ and $\varsigma^{2}$, calculate the mean of all the chains combined and its standard deviation. Interpret these quantities. 
+4. For both $\theta$ and $\varsigma^{2}$, calculate the mean of all the chains combined and its standard deviation. Interpret these quantities.    
 
 ```{r, echo = key, include = key}
 mean(pmean[, samplesKept])
@@ -183,56 +217,29 @@ sd(pmean[, samplesKept])
 mean(pvar[, samplesKept])
 sd(pvar[, samplesKept]) 
 ```
+   
 
-<div class="hider">
-We learned in the lecture on basic probability that the first moment of a distribution can be approximated by computing the mean of many random draws from the distribution and the second central moment can be approximated by computing the variance of many random draws from the distribution.
+We learned in the lecture on basic probability that the first moment of a distribution can be approximated by computing the mean of many random draws from the distribution and the second central moment can be approximated by computing the variance of many random draws from the distribution.   
 
-</div>
 5. Compare the standard deviation of the posterior distribution of $\theta$ with an approximation using the standard deviation of the data divided by the square root of the sample size.  What is this approximation called in the frequentist world? 
 
 ```{r, echo = key, include = key}
 sd(y)/sqrt(length(y))
 ```
-<div class="hider">
-The standard deviation of the posterior distribution of $\theta$ closely matches the approximation known as the standard error in frequentist lingo.
+   
 
-</div>
-6. Vary the number of values in the simulated data set, e.g., n = 10,100,1000. What happens to the mean and variance of the posterior distributions as $n$ gets large? We do not exactly recover the generating values of $\theta$ and $\varsigma^{2}$ when $n$ is small and the variance is further away from its generating value than the mean is. Why?
+The standard deviation of the posterior distribution of $\theta$ closely matches the approximation known as the standard error in frequentist lingo.   
 
-<div class="hider">
-The mean of the posterior distribution of $\theta$ and $\varsigma^2$ will not match the generating value when the sample size is small because simulated data represent one realization of stochastic process. This stochasticity can result in means and variances in small data sets that are quite different from the generating values. The variance is further away because it is more sensitive to extreme values that are rarely included in the simulated data.
+6. Vary the number of values in the simulated data set, e.g., n = 10,100,1000. What happens to the mean and variance of the posterior distributions as $n$ gets large? We do not exactly recover the generating values of $\theta$ and $\varsigma^{2}$ when $n$ is small and the variance is further away from its generating value than the mean is. Why?    
 
-</div>
+The mean of the posterior distribution of $\theta$ and $\varsigma^2$ will not match the generating value when the sample size is small because simulated data represent one realization of stochastic process. This stochasticity can result in means and variances in small data sets that are quite different from the generating values. The variance is further away because it is more sensitive to extreme values that are rarely included in the simulated data.   
 
-7. Make the burnin = 1 instead of 1000. Does this change your results? Why or why not? 
-<br> 
+7. Make the burnin = 1 instead of 1000. Does this change your results? Why or why not?   
+ 
 
-<div class="hider">
 Gibbs updates are extremely efficient.  Convergence is virtually immediate for this simple, two parameter model.  This will not be true for accept-reject updates or for Gibbs updates with many parameters.
 
-</div>
-
-8. Reverse the order of the conjugate functions in step IV.3 so that the variance is drawn first followed by the mean. (Be careful, this involves a bit more than simply reversing the order of the functions in the loop). Does this reordering have an effect on the posteriors? Why or why not? 
-
-<div class="hider">
-The MCMC algorithm is not sensitive to the order that samples are drawn from the full-conditionals.
-
-</div>
-
-
-<br>
-for(t in 2:n.iter){ #mcmc chain length
-  for (j in 1:n.chains){ #replicates
-		pmean[j, t] = draw_mean(mu_0 = 0, sigma.sq_0 = 10000, varsigma.sq = pvar[j, t - 1], y = y)$z
-		pvar[j, t] = draw_var(alpha_0 =.001, beta_0 = .001, theta = pmean[j ,t], y = y)$z
-    #Uncomment to reverse order of draws required by problem 8. Note the change in indexing for pvar on the rhs.
-    pvar[j, t] = draw_var(alpha_0 =.001, beta_0 = .001, theta = pmean[j ,t-1], y = y)$z
-     
-    pmean[j, t] = draw_mean(mu_0 = 0, sigma.sq_0 = 10000, varsigma.sq = pvar[j, t - 1], y = y)$z
-  }		
-}
-
-
+The MCMC algorithm is not sensitive to the order that samples are drawn from the full-conditionals.  
 
 #### Write your own  
 
@@ -247,79 +254,58 @@ for(t in 2:n.iter){ #mcmc chain length
 
 Agree on DAG and posterior $\propto$ likelihood and prior. Take easy appraoch, normal-normal conjugate distribution. 
 
-From the N.T. Hobbs lab: 
-   "We have provided a function called `draw_mean` that 
-calculates the parameters of the posterior distributions for $\theta$ using a normal-normal conjugate relationship where the variance is assumed to be known. The function returns a draw from that distribution. Study the notes relative to this function."
 
-   "We provided a function called `draw_var` that
-calculates the parameters of the posterior distributions for $\varsigma^2$ using a inverse gamma-normal conjugate relationship where the mean is assumed to be known. The function returns a draw from that distribution."
-
-```{r, echo = TRUE, include = TRUE}
-
-draw_mean = function(mu_0, sigma.sq_0, varsigma.sq, y){
-	mu_1 =((mu_0 / sigma.sq_0 + sum(y)/varsigma.sq)) / 
-	  (1/sigma.sq_0 + length(y)/varsigma.sq)
-	sigma.sq_1 = 1/(1 / sigma.sq_0 + length(y) / varsigma.sq)
-	z = rnorm(1, mu_1, sqrt(sigma.sq_1))
-	param = list(z = z, mu_1 = mu_1, sigma.sq_1 = sigma.sq_1)
-	return(param)
-}
-
-# normal likelihood with gamma prior conjugate relationship for variance, assuming mean is known
-# alpha_0 is parameter of prior for variance
-# beta_0 is parameter of prior for variance
-# Note that this uses scale parameterization for inverse gamma
-
-draw_var = function(alpha_0, beta_0, theta, y){
-	alpha_1 = alpha_0 + length(y) / 2
-	beta_1 = beta_0 + sum((y - theta)^2) / 2
-	z = rinvgamma(1, alpha_1, scale = beta_1)
-	param = list(z = z, alpha_1 = alpha_1, beta_1 = beta_1)
-	return(param)
-}
-
-```
-
-
-We could alter the functions slightly to return the distribution instead of one sample. We can do this because this is a conjugate prior and can be computed analytically.  
+We can alter the functions slightly to return the distribution instead of one sample. We can do this because this is a conjugate prior and can be computed analytically. This will speed up an MCMC. As a _Gibbs update_ don't use the ratio of the current and newly proposed, just update each value (because they're really smart choices).  
+From page 168, formulas 7.3.40 and 7.3.41   
 ```{r}
 # normal likelihood with normal prior conjugate for mean, assuming variance is known
 # mu_0 is prior mean
 # sigma.sq_0 is prior variance of mean
 # varsigma.sq is known variance of data, based on average = 78.1 and variance = 10
-#varsigma.sq = sigma_p
-
+#varsigma.sq in equation= sigma_p in our example
 # Collect a sample of 15 bear territory sizes from our data
 y <- rnorm(15, 78.1, sqrt(10)) #standard deviation = sqrt of sigma squared
 
 # Calculate the probability density function of the likelihood
 likelihood <- density(y)
-
-# Draw the probability density function of the prior
-vec <- seq(50,90,by=0.001)
-
-prior_0 <- rnorm(1000, 70, sqrt(12))
-plot(density(prior_0))
-
-prior <- dnorm(vec, 70, sqrt(12)) #prior study
 h <- hist(y, plot=FALSE)
 
-  
-draw_distributionmean <- function(mu_0, sigma.sq_0, varsigma.sq, y,x){
-    n <- length(y)
-    mu_1 =((mu_0 / sigma.sq_0 + sum(y)/varsigma.sq)) / 
-      (1/sigma.sq_0 + length(y)/varsigma.sq)
-    sigma.sq_1 = 1/(1 / sigma.sq_0 + length(y) / varsigma.sq)
-    z = dnorm(x, mu_1, sqrt(sigma.sq_1))
-	param = list(z = z, mu_1 = mu_1, sigma.sq_1 = sigma.sq_1)
-	return(param)
-	}
+# Draw the probability density function of the prior
+#vec <- seq(50,90,by=0.001)
+#prior <- dnorm(vec, 70, sqrt(12)) #prior study
+prior_0 <- rnorm(1000, 70, sqrt(12))
 
-posterior <- draw_distributionmean(70,12,10,y,vec)
+# This works because we assume we know varsigma "..which is vertually never the case" -Hobbs and Hooten 2015, pg 168
+draw_distributionmean <- function(mu_0, sigma.sq_0, varsigma.sq, y){
+  n <- length(y)
+  mu_1 =((mu_0 / sigma.sq_0 + sum(y)/varsigma.sq)) / 
+    (1/sigma.sq_0 + length(y)/varsigma.sq)
+  sigma.sq_1 = 1/(1 / sigma.sq_0 + length(y) / varsigma.sq)
+  z = rnorm(1000, mu_1, sqrt(sigma.sq_1))
+  param = list(z = z, mu_1 = mu_1, sigma.sq_1 = sigma.sq_1)
+  param
+  }
+
+posterior <- draw_distributionmean(70,12,10,y)
   
   
-plot(vec,prior_0, type="l", ylim=c(0,0.5),xlim=c(55,95)) #prior
-hist(y, freq=FALSE, add=TRUE, col="lightblue")
+plot(density(prior_0), type="l", ylim=c(0,max(density(posterior$z)$y)),
+     xlim=c(min(c(h$breaks,prior_0)),max(c(h$breaks,prior_0))), #min and max of prior and data distributions
+     main="Distributions") 
+hist(y, freq=FALSE, add=TRUE, col=rgb(0,0,1,0.15))
 lines(density(y), col="blue")
-lines(vec,posterior$z,col="orange")
+lines(density(posterior$z),col="orange")
+#text(posterior$mu_1+1,max(density(posterior$z)$y),"Posterior")
+#text(mean(y)+1,max(h$density),"data")
+#text(mean(prior_0)-1,max(density(prior_0)$y),"prior")
+legend("topleft", lty=1, col=c("orange","blue","black"), 
+       legend = c("Posterior","Likelihood","Prior"))
 ```
+
+
+```{r, eval=FALSE, echo=FALSE}
+#Full-conditional Distribution example  7.3.2
+a <- 
+
+```
+
