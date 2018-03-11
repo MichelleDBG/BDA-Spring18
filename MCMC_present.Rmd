@@ -352,20 +352,25 @@ plot(density(rnorm(10000,bear.posterior[1],sqrt(bear.posterior[2]))),
 
 Without a conjugate prior  
 ```{r}
+#vector of quantiles
+x <- seq(0,1,by=0.001)
 
 #Pick random starting mu 
 mu_current <- rnorm(1, 70, 12)
 proposal_width <- 3 # sigma square tune, can 'tune' 
 
 #suggest a dumb Metropolis new position
-mu_proposal <- rnorm(mu_current, sqrt(proposal_width)) 
-# 15 proposal samples 
-rnorm(15,mu_proposal,sqrt(proposal_width))
+mu_proposal <- rnorm(1,mu_current, sqrt(proposal_width)) 
+y_proposal <- rnorm(100000, mu_proposal, sqrt(proposal_width))
+pdf_proposal <- approxfun(y_proposal)(y_proposal) #linear interpolation of probabilities at data points
 
 #Compute likelihood, multiply probabilities of each data point
 # "usually you would use log probabilities but we omit this here"
-likelihood_current <- rnorm(1,mu_current,sqrt(proposal_width))*
-  (approxfun(density(y))(y)) #linear interpolation of probabilities at data points
+likelihood_current <- rnorm(1,mu_current,sqrt(proposal_width))*pdf_proposal
+
+plot(density(pdf_proposal),xlim=c(45,80))
+lines(sort(y_proposal),col="red")
+
 likelihood_proposal <- rnorm(1,mu_current,sqrt(proposal_width))*
   (approxfun(density())()) #linear interpolation of probabilities at data points
 
