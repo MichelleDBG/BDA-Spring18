@@ -174,7 +174,7 @@ for(t in 2:n.iter){
 }
 ```
 
-<br>
+
 
 #### V. Trace plots and plots of marginal posteriors
 
@@ -302,10 +302,105 @@ legend("topleft", lty=1, col=c("orange","blue","black"),
        legend = c("Posterior","Likelihood","Prior"))
 ```
 
+Bear Step 1  
+```{r}
+theta_0 = 75
 
-```{r, eval=FALSE, echo=FALSE}
-#Full-conditional Distribution example  7.3.2
-a <- 
+prior_mu <- 70
+prior_sig <- 12
+
+now_mu <- 78.1
+now_varsig <- 10
+
+#pick a number out of distribution for theta star
+theta_star <- rnorm(1,prior_mu,prior_sig)
+
+#Joint with theta star as mean
+theta_k <- prod(rnorm(15,prior_mu,sqrt(prior_sig)))*
+  rnorm(1,)
 
 ```
 
+
+# <http://twiecki.github.io/blog/2015/11/10/mcmc-sampling/> code to R
+```{r}
+#parameters for sampler 
+#chain <- function(data,samples,mu_init,proposal_width,
+ #                 prior_mu,prior_sd){
+#  likelihood_sd <- sd(data)
+#}
+
+#mu ~ normal
+calc_posterior_analytical <-
+  function(data,mu_0,sigma_0,varsigma){
+    n <- length(data)
+    mu_post <- (mu_0/sigma_0 + sum(data)/varsigma)/
+      ((1/sigma_0) + (n/varsigma))
+    sigma_post <- 1/((1/sigma_0) + (n/varsigma))
+    out <- c(mu_post,sigma_post)
+    out
+  }
+
+# y is our territory data from above; sigma_0 = 12 from other study; mu_0 is 70; varsigma is 10 (our mu was 78.1) 
+bear.posterior <- calc_posterior_analytical(y, 70, 12, 10)
+
+plot(density(rnorm(10000,bear.posterior[1],sqrt(bear.posterior[2]))),
+     main="Analytical posterior",
+     xlab="mu", ylab="belief")
+
+```
+
+Without a conjugate prior  
+```{r}
+
+#Pick random starting mu 
+mu_current <- rnorm(1, 70, 12)
+proposal_width <- 3 # sigma square tune, can 'tune' 
+
+#suggest a dumb Metropolis new position
+mu_proposal <- rnorm(mu_current, sqrt(proposal_width)) 
+# 15 proposal samples 
+rnorm(15,mu_proposal,sqrt(proposal_width))
+
+#Compute likelihood, multiply probabilities of each data point
+# "usually you would use log probabilities but we omit this here"
+likelihood_current <- rnorm(1,mu_current,sqrt(proposal_width))*
+  (approxfun(density(y))(y)) #linear interpolation of probabilities at data points
+likelihood_proposal <- rnorm(1,mu_current,sqrt(proposal_width))*
+  (approxfun(density())()) #linear interpolation of probabilities at data points
+
+plot(density(likelihood_current),col="goldenrod")
+```
+
+```{r}
+#Sampler 
+sampler <- function(data, samples, mu_init=0.5, proposal_width=0.5,
+                    prior_mu,prior_var, likelihood_var){
+  x<-seq(-3,3,length.out=5000) #what are these from?
+  posterior <- mu_init
+  
+
+  
+
+  
+  #Compute the prior probability of current and proposed mu
+  prior_current <- rnorm(1, prior_mu, sqrt(prior_sig))*dnorm(data)$y
+  prior_proposal <- rnorm(1, prior_mu, sqrt(prior_sig))*dnorm(data)$y
+  
+  p_current <- likelihood_current*prior_current
+  p_proposal <- likelihood_proposal*prior_proposal
+  
+  #Accept? R
+  R <- p_proposal/p_current
+  if(R < 1){
+    u <- runif(1, min = 0,max = 1)
+    if(R < u){
+      mu_out <- mu_init
+    } else {
+      mu_ou <- mu_proposal
+    }
+  }
+}
+
+
+```

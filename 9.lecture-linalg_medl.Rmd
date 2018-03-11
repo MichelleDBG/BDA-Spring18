@@ -1,0 +1,99 @@
+---
+title: "Lecture notes - applied linear algebra"
+output:
+  pdf_document:
+    fig_caption: yes
+    fig_height: 4
+    fig_width: 6
+  html_notebook: default
+  html_document: default
+---
+
+In biology, we use linear models all the time. Even a simple t-test is a linear model. Section 4.1 of the text tries to make this point, but I would present it in reverse. For exmple, let's look at how a comparison of mean bodyweights for mice under two different diets might vary. We'll approach this ina  stepwise manner. For example, the first thing one might do would be to consider the overall mean and overall variance in bodymass. Then contrast that with diet-specific means and variances. To make this transparent, let's parse the data into these sets.
+
+```{r}
+#getwd()
+mice <- read.csv("../dals_data/femaleMiceWeights.csv")
+mass.all <- mice$Bodyweight # all mice
+mass.chow <- mice$Bodyweight[mice$Diet=="chow"] # mice on control diet
+mass.hf <- mice$Bodyweight[mice$Diet=="hf"] # mice on high fat diet
+```
+
+Make an exploratory plot.
+
+```{r}
+plot(density(mass.all),main="",xlab="mass",ylim=c(0,0.15))
+lines(density(mass.chow),main="control mice",xlab="mass",col="red",lty=2)
+lines(density(mass.hf),main="high fat mice",xlab="mass",col="darkblue",lty=3)
+```
+
+The idea for a linear model is to describe the average bodymass as the response (y variable). So we can 
+
+```{r}
+
+
+```
+
+***
+
+##### Goodness of fit tests
+
+Let's take a look at the Kolmogorov-Smirnov (KS) test for comparing distributions of interval-scaled variables. We can generate data from a series of known distributions and test them for normality.
+
+```{r}
+set.seed(123)
+x <- rnorm(50)
+hist(x)
+ks.test(x,pnorm)
+```
+
+How does sample size affect this? What do you think will happen?
+
+```{r}
+set.seed(321)
+x <- rnorm(4)
+ks.test(x,pnorm)
+```
+
+Can you explain these results? Hint: to do so, requires a solid understanding of a p-value...
+
+OK, now let's look at other types of data distributions
+
+```{r}
+set.seed (456)
+# uniform data
+x <- runif(100)
+hist(x)
+ks.test(x,pnorm)
+ks.test(x,punif)
+
+# lognormal data
+x <- rlnorm(50)
+hist(x)
+ks.test(x,pnorm)
+ks.test(x,plnorm)
+```
+
+Finally, this test can be used to check any two distributions against each other. Goodness of fit in this case asks whether the two data sets came from the same variance generating process.
+
+```{r}
+set.seed(234)
+x <- rnorm(50)
+y <- rnorm(50)
+plot(x,y)
+ks.test(x,y)
+
+# now make them different
+y<- rlnorm(50)
+plot(x,y)
+ks.test(x,y)
+
+# same but from complex distribution
+x <- c(rnorm(100),rnorm(100,3))
+y <- c(rnorm(100),rnorm(100,3))
+hist(x)
+hist(y)
+plot(x,y)
+ks.test(x,y)
+```
+

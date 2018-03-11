@@ -1,0 +1,179 @@
+---
+title: "Lecture notes - design matrices"
+output:
+  pdf_document:
+    fig_caption: yes
+    fig_height: 4
+    fig_width: 6
+  html_notebook: default
+  html_document: default
+---
+
+Recall that each of our data points is a realization of a random process that can be written as a linear combination of some variables; that is, the data for each individual sample unit is written as an equation, usually as a function of x: $Y = f(x) = \hat{\beta}X$. To solve the set of linear equations given by our data (i.e. estimate the $\beta's$), we need the matrices for the covariates/cofactors (X) and for the observations (Y). I know that we often "observe" both the X and the Y in most research projects, but naming convention grows out of experimental design, where the X is generally considered known and fixed by the experimenter. That is, the values of X are manipulated to "test" for a response to those changes. The response is what the experimenter observes after the procedure, and it is the set of those responses that is thought to include some level of background noise (randomness), which is why the $\epsilon_i$ is added on the right hand side of the equation: $$y_i = \beta_0 + \beta_1x_i + \epsilon_i$$ The $\epsilon's$ represent the "fudge factors" for every observed value. That is, they tell us how far from the model expectation (mean) the actual observation was. Notice that the expression above is actually short hand notation for a set of expressions. That is, if n=3, then the above expression expands to: $$y_1 = \beta_0 + \beta_1x_1 + \epsilon_1$$ $$y_2 = \beta_0 + \beta_1x_2 + \epsilon_2$$ $$y_3 = \beta_0 + \beta_1x_3 + \epsilon_3$$ which can be written in matrix notation as $$\begin{pmatrix} y_1 \\ y_2 \\ y_3 \end{pmatrix} = \begin{pmatrix} 1 & x_1 \\ 1 & x_2 \\ 1 & x_3 \end{pmatrix} \begin{pmatrix} \beta_0 \\ \beta_1 \end{pmatrix} + \begin{pmatrix} \epsilon_1 \\ \epsilon_2 \\ \epsilon_3 \end{pmatrix}$$
+
+OK, now back to the original aim. We want to solve the set of equations given by our data. Your text presented the solution in chapter 4 and again in chapter 5 as $$\hat{\beta} = (X^TX)^{-1}X^TY$$ It's clear that all we need is X and Y, which are the two leftmost matrices in the expression immediately above. For this class, Y will always be a single dimension variable (as it is above). We won't have time to consider models for multivariate response variables, though they of course exist and you may someday need to consider them...
+
+Given that Y is comparatively simple, let's work through examples of X, which can easily get complex. These notes are to accompany the textbook sections on this topic. I've changed some of the notation and examples because I find it weird to use numbers for factors, since R converts these for us on the fly. So I'll contrive a parallel set of examples that consider an experiment with one reference level and one or more treatments. For each example, I'll work through the case where each treatment receives n=3 biological replicates, the commonly used number for joke tellers and experimental biologists...
+
+```{r}
+trt <- factor(c(rep("ref",3), rep("A",3)))
+model.matrix(~trt)
+```
+
+This design shows me that the first three data records I have are for sample units assigned to the reference treatment, and the next three are assigned to the "A" treatment. The non-intercept column headers are the names fo "dummy" or indicator variables that R creates for all factors (nominal scaled variables). For rows where "trtref"=1, the sample unit has the trt level "ref", and for rows where trtref=0, the treatment is not "ref".
+
+Just as the terminology for linear models (observations/response, etc.) derives from experimental designs, so too does the standard design matrix for linear models. Usually, the experimenter has a single reference level in mind, against which she wants to compare one or more treatment levels. This is why the design matrices for cofactors (nominally-scaled X variables) default to including one of the levels as the intercept, and reporting the offsets for all the others. This is done when the first column of the design matrix is full of 1's. This effectively sets the baseline for all sample units. That is, every sample unit value will start with the average for the first factor level, and we'll add/subtract some amount (adjust) to reach the mean of additional level of the factor. For the example described above, I want to report the mean for the reference level, and then figure out the offsets from that for the treatments. But notice the output defaults to using level "A" as the reference, even though I clearly labeled the reference level as "reference". That's because, unless told otherwise, R will always default to listing the levels of a factor in alphabetical order:
+
+```{r}
+levels(trt)
+```
+
+Let's fix that. Your book shows two ways to re-arrange the order of the factor levels. The function relevel() works if you just want to identify the reference level, and don't care about the order of the remaining levels. Use the levels argument for factor() to specify order if you have many levels and want to re-organize them. For example, if you have a factor called temps with ordered levels "cold" "warm" "hot", R would default to "cold" "hot" "warm":
+
+```{r}
+temps <- factor(c("cold", "warm", "hot"))
+levels(temps)
+```
+
+Relevel() doesn't work, because we still want "cold" to appear first. So we need to use factor() instead:
+
+```{r}
+temps <- relevel(temps,"cold")
+levels(temps)
+temps <- factor(temps, levels = c("cold","warm","hot"))
+levels(temps)
+```
+
+Back to our experiment. We can use either in this case, because we have but one single reference level:
+
+```{r}
+trt <- relevel(trt,"ref")
+levels(trt)
+```
+
+Now get the correct model matrix:
+
+```{r}
+model.matrix(~trt)
+```
+
+Now we have the first three records represented by only the intercept. The next three have the additional offset for the "A" treatment. As we saw in lab last week, we can modify a linear mdoel to exclude the intercept (remove it, or set it to 0). We can accomplish that in the same way we did for the lm() function last week - notice that we are feeding the right hand side of the lm() expression (the X matrix) to model.matrix(). Let's see what the design matrix would look like for the case without an intercept. I'll show the way we learned last week (remove the intercept, $\beta_0$), followed by your book notation (setting $\beta_0$ to 0). They are equivalent:
+
+```{r}
+model.matrix(~trt -1)
+model.matrix(~ 0 + trt)
+```
+
+OK. Getting it? These design matrices are explicit in their use of indicator variables; there is no offset. Each of the $\beta's$ will represent the mean for a new treatment level. Because there is only a single variable and no intercept in the X matrix here, each row should contain a singel 1, to indicate which level of the X factor that sample unit is (recall that rows are sample units). Now we'll add more treatment levels to the same singel factor variable, again each time with 3 replicates:
+
+```{r}
+newtrt <- factor(c(trt,rep("B",3),rep("C",3),rep("D",3)))
+model.matrix(~newtrt)
+```
+
+What happened to treatment A? Let's back up and look at trt:
+
+```{r}
+levels(trt)
+```
+
+Looks fine, but recall that I said R changes factors to numbers on the fly, which is why I wanted to use character values for the factor levels in these notes, rather than numbers as the book does... Let's look at the structure of this factor:
+
+```{r}
+str(trt)
+str(newtrt)
+```
+
+Aha! Here, we see that once R gets the factor into the working space, the labels are matched to numbers, and the numbers are the things that are stored in the object "trt". Those numbers then get concatenated with the new levels we add, which are handled as intended, and then turned into numbers (3,4, and 5). What we really want is to carry forward the character values for each record in the original "trt" object. We can do that by adding the trt factor as character values. 
+
+```{r}
+newtrt <- factor(c(as.character(trt),rep("B",3),rep("C",3),rep("D",3)))
+str(newtrt)
+```
+
+But notice that the ordering reverts to alphabetical. So we'll need to relevel() again.
+
+```{r}
+newtrt <- relevel(newtrt,"ref")
+str(newtrt)
+```
+
+OK. Now the originally intended design matrix, and the design without an intercept (to make sure we got it):
+
+```{r}
+model.matrix(~newtrt)
+model.matrix(~newtrt -1)
+```
+
+So by now, you should be comfortable with understanding how the intercept works and what to expect from model fitting (what means are given, what offsets, etc.) Beyond that, there's also some value in making sure we really understand that all these data analyses are just solving a system of linear equations determined by our data. To make sure we're really following along, let's shuffle the ordering of our data and take a look at the design matrix:
+
+```{r}
+set.seed(42)
+shuff <- sample(newtrt)
+shuff
+model.matrix(~shuff)
+```
+
+Make sense? We can write the design matrix using explicit dummy variables, in case that helps. If not, ask questions in class or of your classmates...
+
+```{r}
+shuff
+model.matrix(~shuff -1)
+```
+
+Point here is that the order of the data in your dataframe doesn't matter. The linear algebra notation handles that just fine. To see this, write it out in matrix notation and do the matrix operations to get the expressions. Let's use the simpler design matrix, without the intercept $$\begin{pmatrix} 0 & 0 & 0 & 0 & 1 \\ 0 & 0 & 0 & 0 & 1 \\ 0 & 1 & 0 & 0 & 0 \\ 0 & 0 & 0 & 1 & 0 \\ 0 & 0 & 1 & 0 & 0 \\ 0 & 1 & 0 & 0 & 0 \\ 0 & 0 & 1 & 0 & 0 \\ 1 & 0 & 0 & 0 & 0 \\ 0 & 1 & 0 & 0 & 0 \\ 0 & 0 & 1 & 0 & 0 \\ 1 & 0 & 0 & 0 & 0 \\ 0 & 0 & 0 & 1 & 0 \\ 0 & 0 & 0 & 0 & 1 \\ 1 & 0 & 0 & 0 & 0 \\ 0 & 0 & 0 & 1 & 0 \end{pmatrix} \begin{pmatrix} ref \\ A \\ B \\ C \\ D \end{pmatrix}$$ 
+
+***
+
+Now let's add a different kind of complexity to make sure we really understand what's going on. I've made some modifications to the code in the book for the section on more variables. Now we consider an experiemnt with two different diets in the treatment variable (chow and high fat), and we'll have two female and two male mice on each diet.
+
+```{r}
+d <- c("chow","HF")
+s <- c(rep("F", 2), rep("M", 2))
+ex.dat <- expand.grid(diet = d, sex = s)
+ex.dat
+table(ex.dat)
+```
+
+Hopefully, there was a new trick or two in that code that might help you avoid the need to "hard code" down the line. The term "hard code" means to write expressions that are not generalizable to other conditions. For example, if you used the code in the book for generating the diet/sex data set, but then suddenly wanted to expand that to inlcude many more replicates, you would have to keep track of the number of "f" and "m" in the concatenated string. That's begging for errors, which is why I offer the alternate code above. The rep() code makes clear the number of replicates for each level of the variable "sex". The code above doesn't reproduce *exactly* the results in the book, because of ordering of the data. The table is identical, as that just tallies the number of observations in each diet-by-sex cells, but the model matrix looks different (we also used diet names, rather than numbers).
+
+```{r}
+model.matrix(~ diet + sex, data = ex.dat)
+```
+
+Again, this is because of the different ordering of the data, but it's easy enough to change the ordering. Just swap the order in which the grid is expanded:
+
+```{r}
+ex.dat <- expand.grid(sex = s, diet = d)
+ex.dat
+model.matrix(~ diet + sex, data = ex.dat)
+```
+
+OK, back on track now. The key reason for working with more complex model matrices is to reinforce your understanding of how to use a model matrix to understand the output from lm(). Using the model matrix generated above, can you tell me for which set of mice $\hat{\beta_0}$ will be the mean? To figure this out, recall the matrix notation for our data here is: $$\begin{pmatrix} y_1 \\ y_2 \\ \vdots \\ y_8 \end{pmatrix} = \begin{pmatrix} 1 & x_{1,1} & x_{1,2} \\ 1 & x_{2,1} & x_{2,2} \\ \vdots & \vdots &\vdots \\ 1 & x_{8,1} & x_{8,2} \end{pmatrix} \begin{pmatrix} \beta_0 \\ \beta_1 \\ \beta_2 \end{pmatrix}$$ Now you just need to logically connect the levels of X to see what $\beta_0$ should be. It's a bit trickier now with two variables, but we just do the same thing -  use the model matrix and the $\beta$ vector to write out data equations for some of the sample units. Here's the model matrix and $\beta$ vector for this example: $$\begin{pmatrix} 1 & 0 & 0 \\ 1 & 0 & 0 \\ 1 & 0 & 1 \\ 1 & 0 & 1 \\ 1 & 1 & 0 \\ 1 & 1 & 0 \\ 1 & 1 & 1 \\ 1 & 1 & 1 \\ \end{pmatrix} \begin{pmatrix} \beta_0 \\ \beta_1 \\ \beta_2 \end{pmatrix}$$ OK. Do you have some expressions now? Then you just need to think about the titles for the second and third columns in the design matrix, which are "dummy" (or indicator) variables. The first is "high fat diet", and the second is "male". That means that if the second column has a 1 in the design matrix, that sample unit was on the high fat diet. If a 0, it was on the chow diet. Likewise, if the third column has a 1, the sample unit was a male, and if a 0, it was a female. Recall that by default R orders the levels of a factor (0,1,2,3, etc.) in alphabetical order, so "chow" < "high fat", etc. Now, can you say which type of sample $\beta_0$ will give the estimated mean response? Still kinda tricky, yes?
+
+***
+
+Ready to consider an example using interaction terms? It follows the same logic, but just adds another linear term for the interaction offset (effect).
+
+```{r}
+model.matrix(~ diet*sex, data = ex.dat)
+```
+
+So, this one will be easier to understand after we go through 5.8 and 5.9 next week. For now, just recognize that that $\beta_0$ is nto the same thing in the model with only additive effects as in the model with an interaction term.
+
+***
+
+Finally, let's consider extensions to the design matrix that include covariates (interval/ratio scaled variables). Let's say that the mice in the previous examples vary in age from 10 to 25 days old. We can add this as a covariate to the data frame we created above, and fill it with randomly chosen ages from that range. Note that we are filling them at random just for purposes of getting some data into our mock-set. In practice, of course, you would simply record the age of each mouse that was used in yoru experiment, just as you would record the sex of each mouse. You might even modify the design to reduce potnetial bias from age by assigning mice based on age and sex and striving to balance the design across those two variables. For example, you might put one young and one old male mouse on each diet, and one young and one old female mouse on each diet (although obviously you would want more replicates).
+
+```{r}
+ex.dat$age <- sample(10:25, nrow(ex.dat), T)
+ex.dat
+```
+
+Now let's consider the design matrix for modeling the effects of diet, sex, and age.
+
+```{r}
+model.matrix(~ diet + sex + age, data = ex.dat)
+```
+
+As an excercise left to do in lecture, we will write the $\beta$ matrix and interpret the entries.
