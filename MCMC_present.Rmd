@@ -302,34 +302,9 @@ legend("topleft", lty=1, col=c("orange","blue","black"),
        legend = c("Posterior","Likelihood","Prior"))
 ```
 
-Bear Step 1  
-```{r}
-theta_0 = 75
-
-prior_mu <- 70
-prior_sig <- 12
-
-now_mu <- 78.1
-now_varsig <- 10
-
-#pick a number out of distribution for theta star
-theta_star <- rnorm(1,prior_mu,prior_sig)
-
-#Joint with theta star as mean
-theta_k <- prod(rnorm(15,prior_mu,sqrt(prior_sig)))*
-  rnorm(1,)
-
-```
-
 
 # <http://twiecki.github.io/blog/2015/11/10/mcmc-sampling/> code to R
 ```{r}
-#parameters for sampler 
-#chain <- function(data,samples,mu_init,proposal_width,
- #                 prior_mu,prior_sd){
-#  likelihood_sd <- sd(data)
-#}
-
 #mu ~ normal
 calc_posterior_analytical <-
   function(data,mu_0,sigma_0,varsigma){
@@ -349,63 +324,62 @@ plot(density(rnorm(10000,bear.posterior[1],sqrt(bear.posterior[2]))),
      xlab="mu", ylab="belief")
 
 ```
+Likelihood: true parameter is x, you define a likelihood curve based on that true parameter i.e. Poisson(y|x) or normal(y|mu,var)
 
 Without a conjugate prior  
 ```{r}
-#vector of quantiles
-x <- seq(0,1,by=0.001)
-
-#Pick random starting mu 
-mu_current <- rnorm(1, 70, 12)
-proposal_width <- 3 # sigma square tune, can 'tune' 
-
-#suggest a dumb Metropolis new position
-mu_proposal <- rnorm(1,mu_current, sqrt(proposal_width)) 
-y_proposal <- rnorm(100000, mu_proposal, sqrt(proposal_width))
-pdf_proposal <- approxfun(y_proposal)(y_proposal) #linear interpolation of probabilities at data points
-
-#Compute likelihood, multiply probabilities of each data point
-# "usually you would use log probabilities but we omit this here"
-likelihood_current <- rnorm(1,mu_current,sqrt(proposal_width))*pdf_proposal
-
-plot(density(pdf_proposal),xlim=c(45,80))
-lines(sort(y_proposal),col="red")
-
-likelihood_proposal <- rnorm(1,mu_current,sqrt(proposal_width))*
-  (approxfun(density())()) #linear interpolation of probabilities at data points
-
-plot(density(likelihood_current),col="goldenrod")
-```
-
-```{r}
+# mu ~ normal
 #Sampler 
-sampler <- function(data, samples, mu_init=0.5, proposal_width=0.5,
-                    prior_mu,prior_var, likelihood_var){
-  x<-seq(-3,3,length.out=5000) #what are these from?
-  posterior <- mu_init
-  
+sampler <- function(data, samples, proposal_width, prior_mu,prior_sig2){
+  chain <- c()
+  like_data_pdf <- density(data)
+  prior_data_pdf <- density(rnorm(10000,prior_mu,sqrt(prior_sig2)))
+  mu_start <- rnorm(1, prior_mu, prior_sig2) #Pick random starting mu 
+  chain <- mu_start
+  mu_current <- mu_start
 
-  
+  for(i in 2:samples){
+    y_current <- rnorm(100000, mu_current, sqrt(proposal_width))
+    #suggest a dumb Metropolis new position
+    mu_proposal <- rnorm(1,mu_current, sqrt(proposal_width)) 
+    y_proposal <- rnorm(100000, mu_proposal, sqrt(proposal_width))
+    
+    #Compute likelihood
+    # "usually you would use log probabilities but we omit this here"
+    likelihood_current<-rnorm(1,mu_current,sqrt(proposal_width))*
+      approx(like_data_pdf,xout=mu_current)$y
+    likelihood_proposal<-rnorm(1,mu_proposal,sqrt(proposal_width))*
+      approx(like_data_pdf,xout=mu_proposal)$y
 
-  
-  #Compute the prior probability of current and proposed mu
-  prior_current <- rnorm(1, prior_mu, sqrt(prior_sig))*dnorm(data)$y
-  prior_proposal <- rnorm(1, prior_mu, sqrt(prior_sig))*dnorm(data)$y
-  
-  p_current <- likelihood_current*prior_current
-  p_proposal <- likelihood_proposal*prior_proposal
-  
-  #Accept? R
-  R <- p_proposal/p_current
-  if(R < 1){
-    u <- runif(1, min = 0,max = 1)
-    if(R < u){
-      mu_out <- mu_init
-    } else {
-      mu_ou <- mu_proposal
-    }
+    #Prior
+    prior_current <- rnorm(1, prior_mu, sqrt(prior_sig2))*
+      approx(prior_data_pdf,xout=mu_current)$y
+    prior_proposal <- rnorm(1, prior_mu, sqrt(prior_sig2))*
+      approx(prior_data_pdf,xout=mu_proposal)$y
+    p_current <- likelihood_current*prior_current
+    p_proposal <- likelihood_proposal*prior_proposal
+    
+    # Accept proposal?
+    R <- p_proposal/p_current
+    accept <- if(R < 1){
+      u <- runif(1, min = 0,max = 1)
+      if(R < u) mu_proposal <- mu_current
+      }
+    chain[i] <- mu_proposal
+    mu_current <- mu_proposal #which is either same if rejected or new if accepted
   }
+  
+  chain
 }
 
-
 ```
+
+
+```{r}
+test <- sampler(data=y,samples=30,proposal_width = 9,
+                prior_mu=70,prior_sig2=12)
+
+
+plot(density(test), main="")
+```
+
