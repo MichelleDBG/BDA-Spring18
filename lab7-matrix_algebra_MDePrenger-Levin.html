@@ -363,11 +363,164 @@ dataidentity</code></pre>
 <pre><code>## [1] 3=-0.2+E   6.3=-1.5+E 5.2=-0.5+E 2.8=0.4+E  -0.3=1.4+E 2.8=0.4+E 
 ## [7] 5.5=-1.4+E</code></pre>
 <p>Q4. Write the same system using matrix notation. Hint: you will have a y-matrix, and x-matrix, and a beta-matrix.<br />
-<strong><span class="math inline">\(\bar{y}\)</span></strong> = <strong><span class="math inline">\(\bar{x}\)</span></strong> + <span class="math inline">\(\varepsilon\)</span><br />
-or <strong><span class="math inline">\(\bar{y}\)</span></strong> = <strong>x</strong> <span class="math inline">\(\bar{\beta_0}\)</span></p>
+<!-- __$\bar{y}$__ = __$\bar{x}$__ + $\varepsilon$     --> <strong><span class="math inline">\(\bar{y}\)</span></strong> = <strong>x</strong> <span class="math inline">\(\bar{\beta_0}\)</span></p>
+<pre class="r"><code>y &lt;- matrix(df1$y, nrow=nrow(df1))
+x &lt;- matrix(df1$x, nrow=nrow(df1))
+beta.mat &lt;- &quot;B_0&quot;
+
+
+paste(y,&quot;=&quot;,x,beta.mat)</code></pre>
+<pre><code>## [1] &quot;3 = -0.2 B_0&quot;   &quot;6.3 = -1.5 B_0&quot; &quot;5.2 = -0.5 B_0&quot; &quot;2.8 = 0.4 B_0&quot; 
+## [5] &quot;-0.3 = 1.4 B_0&quot; &quot;2.8 = 0.4 B_0&quot;  &quot;5.5 = -1.4 B_0&quot;</code></pre>
+<p><span class="math display">\[
+{\left(\begin{array}{cc}
+3\\
+6.3\\
+5.2\\
+2.8\\
+-0.3\\
+2.8\\
+5.5
+\end{array}\right)} = {
+\left(\begin{array}{cc}
+-0.2\\
+-1.5\\
+-0.5\\
+0.4\\
+-0.3\\
+0.4\\
+-1.4
+\end{array}\right)
+}{\bar{\beta_0}}
+\]</span></p>
 <hr />
 <p>Q5. Fetch the mice weight data. e.g. mice &lt;- read.csv(“femaleMiceWeights.csv”). Make the y vector from the bodyweights and build the X matrix for the two diets. Do this in R and show each matrix (y and X).</p>
+<pre class="r"><code>library(RCurl)</code></pre>
+<pre><code>## Loading required package: bitops</code></pre>
+<pre class="r"><code>mice &lt;- read.csv(text=getURL(&quot;https://raw.githubusercontent.com/MichelleDBG/BDA-Spring18/58add0bca858530c6c0fb6bcfbfbefbc88b1b59f/femaleMiceWeights.csv&quot;))
+
+y&lt;-mice$Bodyweight
+diet &lt;- factor(mice$Diet) #chow &lt; hf levels
+A &lt;- model.matrix(~diet)</code></pre>
+<pre class="r"><code>x &lt;- matrix(1, nrow=nrow(mice), ncol=2) # to build first column of 1s for the betas, the second column to indicate if it's in the chow (0; just beta_0) or in the hf (1; beta_1)
+x[,2] &lt;- c(rep(0,table(mice$Diet)[1]),rep(1,table(mice$Diet)[2]))
+
+
+diet2 &lt;- factor(c(rep(&quot;D&quot;,2),rep(&quot;A&quot;,2), rep(&quot;B&quot;,2), rep(&quot;C&quot;,2)))
+model.matrix(~diet2)
+model.matrix(~diet2[diet2==&quot;C&quot;])
+
+diet2 &lt;- factor(diet2, levels = c(&quot;C&quot;,&quot;A&quot;,&quot;B&quot;,&quot;D&quot;))
+
+diet2 &lt;- relevel(diet2,&quot;B&quot;) #sets whatever you call to 1
+
+model.matrix(~diet[diet==&quot;chow&quot;])
+
+levels(diet)
+y
+x                </code></pre>
 <p>Q6. Use solve() to find and interpret the <span class="math inline">\(\hat{\beta}'s\)</span> and compare with results from lm()</p>
+<pre class="r"><code>betahat &lt;- solve(crossprod(A))%*%crossprod(A,y)
+betahat</code></pre>
+<pre><code>##                  [,1]
+## (Intercept) 23.813333
+## diethf       3.020833</code></pre>
+<pre class="r"><code>lm(y~0+A) #B0 = 23.8, B1,Adiethf = 3.0 </code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = y ~ 0 + A)
+## 
+## Coefficients:
+## A(Intercept)       Adiethf  
+##       23.813         3.021</code></pre>
+<pre class="r"><code>lm(y~-1+A) #expecting mean for each group but not getting it</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = y ~ -1 + A)
+## 
+## Coefficients:
+## A(Intercept)       Adiethf  
+##       23.813         3.021</code></pre>
+<pre class="r"><code>lm(y~A) # Why is it treating the first column of 1s like a  </code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = y ~ A)
+## 
+## Coefficients:
+##  (Intercept)  A(Intercept)       Adiethf  
+##       23.813            NA         3.021</code></pre>
+<pre class="r"><code>Anot &lt;- model.matrix(~diet +0) #boolean
+lm(y~Anot)</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = y ~ Anot)
+## 
+## Coefficients:
+##  (Intercept)  Anotdietchow    Anotdiethf  
+##       26.834        -3.021            NA</code></pre>
+<pre class="r"><code>A</code></pre>
+<pre><code>##    (Intercept) diethf
+## 1            1      0
+## 2            1      0
+## 3            1      0
+## 4            1      0
+## 5            1      0
+## 6            1      0
+## 7            1      0
+## 8            1      0
+## 9            1      0
+## 10           1      0
+## 11           1      0
+## 12           1      0
+## 13           1      1
+## 14           1      1
+## 15           1      1
+## 16           1      1
+## 17           1      1
+## 18           1      1
+## 19           1      1
+## 20           1      1
+## 21           1      1
+## 22           1      1
+## 23           1      1
+## 24           1      1
+## attr(,&quot;assign&quot;)
+## [1] 0 1
+## attr(,&quot;contrasts&quot;)
+## attr(,&quot;contrasts&quot;)$diet
+## [1] &quot;contr.treatment&quot;</code></pre>
+<pre class="r"><code>Anot</code></pre>
+<pre><code>##    dietchow diethf
+## 1         1      0
+## 2         1      0
+## 3         1      0
+## 4         1      0
+## 5         1      0
+## 6         1      0
+## 7         1      0
+## 8         1      0
+## 9         1      0
+## 10        1      0
+## 11        1      0
+## 12        1      0
+## 13        0      1
+## 14        0      1
+## 15        0      1
+## 16        0      1
+## 17        0      1
+## 18        0      1
+## 19        0      1
+## 20        0      1
+## 21        0      1
+## 22        0      1
+## 23        0      1
+## 24        0      1
+## attr(,&quot;assign&quot;)
+## [1] 1 1
+## attr(,&quot;contrasts&quot;)
+## attr(,&quot;contrasts&quot;)$diet
+## [1] &quot;contr.treatment&quot;</code></pre>
+<p>Both <span class="math inline">\(\hat{\beta}\)</span> and the results of lm() report the mean of body weights of individuals that were given the ‘chow’ diet as <span class="math inline">\(\beta\)</span><sub>0</sub> = 23.81 and the offset or effect size of the ‘hf’ diet as <span class="math inline">\(\beta\)</span><sub>1</sub> = 3.02. The mean body weight of mice given the high fat diet is 26.83.</p>
 </div>
 
 

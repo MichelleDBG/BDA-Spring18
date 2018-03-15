@@ -152,7 +152,8 @@ $$
 3 & 2  
 \end{array}\right)
 $$
-matrix(c(2,3,1,2),2,2)   
+matrix(c(2,3,1,2),2,2)  
+
 
 Q2. Which of the following is the inverse of A? Use row operations and/or R to prove your answer is correct.     
 
@@ -267,11 +268,16 @@ library(RCurl)
 mice <- read.csv(text=getURL("https://raw.githubusercontent.com/MichelleDBG/BDA-Spring18/58add0bca858530c6c0fb6bcfbfbefbc88b1b59f/femaleMiceWeights.csv"))
 
 y<-mice$Bodyweight
+diet <- factor(mice$Diet) #chow < hf levels
+A <- model.matrix(~diet)
+
+```
+
+```{r, eval=FALSE}
+
 x <- matrix(1, nrow=nrow(mice), ncol=2) # to build first column of 1s for the betas, the second column to indicate if it's in the chow (0; just beta_0) or in the hf (1; beta_1)
 x[,2] <- c(rep(0,table(mice$Diet)[1]),rep(1,table(mice$Diet)[2]))
 
-diet <- factor(mice$Diet)
-A <- model.matrix(~diet)
 
 diet2 <- factor(c(rep("D",2),rep("A",2), rep("B",2), rep("C",2)))
 model.matrix(~diet2)
@@ -291,17 +297,15 @@ x
 
 Q6. Use solve() to find and interpret the $\hat{\beta}'s$ and compare with results from lm()
 ```{r}
-table(mice$Diet) #chow 12, hf 12
-#beta_mat <- matrix(1, nrow=2,ncol=12) #for each beta_0 in chow and each beta_1 in hf
+betahat <- solve(crossprod(A))%*%crossprod(A,y)
+betahat
+lm(y~0+A) #B0 = 23.8, B1,Adiethf = 3.0 
+lm(y~-1+A) #expecting mean for each group but not getting it
+lm(y~A) # Why is it treating the first column of 1s like a  
 
-
-solve(crossprod(A)) %*% t(A)
-
-
-
-lm(y~x[,2]) #intercept = 23.8, x[,2] = 3.0 
-
-lm(y~A)
-summary(lm(y~x[,2]))
-
+Anot <- model.matrix(~diet +0) #boolean
+lm(y~Anot)
+A
+Anot
 ```
+Both $\hat{\beta}$ and the results of lm() report the mean of body weights of individuals that were given the 'chow' diet as $\beta$~0~ = 23.81 and the offset or effect size of the 'hf' diet as $\beta$~1~ = 3.02. The mean body weight of mice given the high fat diet is  26.83.  
