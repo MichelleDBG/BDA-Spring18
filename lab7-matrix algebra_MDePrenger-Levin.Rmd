@@ -223,14 +223,85 @@ noquote(paste(df1$y,"=",df1$x, "+E", sep=""))
 Q4. Write the same system using matrix notation. Hint: you will have a y-matrix, and x-matrix, and a beta-matrix.   
 <!-- __$\bar{y}$__ = __$\bar{x}$__ + $\varepsilon$     -->
 __$\bar{y}$__ = __x__ $\bar{\beta_0}$
- 
+
+
+```{r}
+y <- matrix(df1$y, nrow=nrow(df1))
+x <- matrix(df1$x, nrow=nrow(df1))
+beta.mat <- "B_0"
+
+
+paste(y,"=",x,beta.mat)
+
+```
+
+$$
+{\left(\begin{array}{cc}
+3\\
+6.3\\
+5.2\\
+2.8\\
+-0.3\\
+2.8\\
+5.5
+\end{array}\right)} = {
+\left(\begin{array}{cc}
+-0.2\\
+-1.5\\
+-0.5\\
+0.4\\
+-0.3\\
+0.4\\
+-1.4
+\end{array}\right)
+}{\bar{\beta_0}}
+$$ 
+
+
+
 ***
 
 Q5. Fetch the mice weight data. e.g. mice <- read.csv("femaleMiceWeights.csv"). Make the y vector from the bodyweights and build the X matrix for the two diets. Do this in R and show each matrix (y and X).  
 ```{r}
+library(RCurl)
+mice <- read.csv(text=getURL("https://raw.githubusercontent.com/MichelleDBG/BDA-Spring18/58add0bca858530c6c0fb6bcfbfbefbc88b1b59f/femaleMiceWeights.csv"))
 
+y<-mice$Bodyweight
+x <- matrix(1, nrow=nrow(mice), ncol=2) # to build first column of 1s for the betas, the second column to indicate if it's in the chow (0; just beta_0) or in the hf (1; beta_1)
+x[,2] <- c(rep(0,table(mice$Diet)[1]),rep(1,table(mice$Diet)[2]))
 
+diet <- factor(mice$Diet)
+A <- model.matrix(~diet)
+
+diet2 <- factor(c(rep("D",2),rep("A",2), rep("B",2), rep("C",2)))
+model.matrix(~diet2)
+model.matrix(~diet2[diet2=="C"])
+
+diet2 <- factor(diet2, levels = c("C","A","B","D"))
+
+diet2 <- relevel(diet2,"B") #sets whatever you call to 1
+
+model.matrix(~diet[diet=="chow"])
+
+levels(diet)
+y
+x                
 ``` 
 
 
 Q6. Use solve() to find and interpret the $\hat{\beta}'s$ and compare with results from lm()
+```{r}
+table(mice$Diet) #chow 12, hf 12
+#beta_mat <- matrix(1, nrow=2,ncol=12) #for each beta_0 in chow and each beta_1 in hf
+
+
+solve(crossprod(A)) %*% t(A)
+
+
+
+lm(y~x[,2]) #intercept = 23.8, x[,2] = 3.0 
+
+lm(y~A)
+summary(lm(y~x[,2]))
+
+```

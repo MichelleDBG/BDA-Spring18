@@ -326,36 +326,28 @@ plot(density(rnorm(10000,bear.posterior[1],sqrt(bear.posterior[2]))),
 ```
 Likelihood: true parameter is x, you define a likelihood curve based on that true parameter i.e. Poisson(y|x) or normal(y|mu,var)
 
+
+
 Without a conjugate prior  
 ```{r}
 # mu ~ normal
 #Sampler 
-sampler <- function(data, samples, proposal_width, prior_mu,prior_sig2){
+sampler <- function(data, samples, proposal_width, prior_mu,prior_sig2,sigma_p){
   chain <- c()
-  like_data_pdf <- density(data)
   prior_data_pdf <- density(rnorm(10000,prior_mu,sqrt(prior_sig2)))
   mu_start <- rnorm(1, prior_mu, prior_sig2) #Pick random starting mu 
   chain <- mu_start
   mu_current <- mu_start
 
   for(i in 2:samples){
-    y_current <- rnorm(100000, mu_current, sqrt(proposal_width))
+    likelihood_current <- prod(dnorm(data,mu_current,sqrt(sigma_p)))
     #suggest a dumb Metropolis new position
     mu_proposal <- rnorm(1,mu_current, sqrt(proposal_width)) 
-    y_proposal <- rnorm(100000, mu_proposal, sqrt(proposal_width))
-    
-    #Compute likelihood
-    # "usually you would use log probabilities but we omit this here"
-    likelihood_current<-rnorm(1,mu_current,sqrt(proposal_width))*
-      approx(like_data_pdf,xout=mu_current)$y
-    likelihood_proposal<-rnorm(1,mu_proposal,sqrt(proposal_width))*
-      approx(like_data_pdf,xout=mu_proposal)$y
+    likelihood_proposal <- prod(dnorm(data,mu_proposal,sqrt(sigma_p)))
 
     #Prior
-    prior_current <- rnorm(1, prior_mu, sqrt(prior_sig2))*
-      approx(prior_data_pdf,xout=mu_current)$y
-    prior_proposal <- rnorm(1, prior_mu, sqrt(prior_sig2))*
-      approx(prior_data_pdf,xout=mu_proposal)$y
+    prior_current <- dnorm(mu_current,prior_mu, sqrt(prior_sig2))
+    prior_proposal <- dnorm(mu_proposal,prior_mu, sqrt(prior_sig2))
     p_current <- likelihood_current*prior_current
     p_proposal <- likelihood_proposal*prior_proposal
     
@@ -376,10 +368,47 @@ sampler <- function(data, samples, proposal_width, prior_mu,prior_sig2){
 
 
 ```{r}
-test <- sampler(data=y,samples=30,proposal_width = 9,
-                prior_mu=70,prior_sig2=12)
+test <- sampler(data=y,samples=1000000,proposal_width = 10000,
+                prior_mu=70,prior_sig2=12, sigma_p=10)
 
-
+test[1]
 plot(density(test), main="")
+points(test[1],0.1)
+
+plot(test[(length(test)-1000):length(test)],type="l") #the trace
+plot(test,type="l")
+
 ```
+
+
+```{r}
+
+gamma_y <- rgamma(15, (70^2)/12,70/12)
+plot(density(gamma_y))
+
+test_gamma <- sampler(data=gamma_y,samples=100000,proposal_width = 9,
+                prior_mu=70,prior_sig2=12, sigma_p=10)
+
+test_gamma[1]
+plot(density(test_gamma), main="")
+
+
+```
+
+In progress
+```{r}
+
+lognorm_y <- rlnorm(15, log(70),sqrt(log()))
+plot(density(gamma_y))
+
+test_lognorm <- sampler(data=gamma_y,samples=100000,proposal_width = 9,
+                prior_mu=70,prior_sig2=12, sigma_p=10)
+
+test_gamma[1]
+plot(density(test_gamma), main="")
+
+
+```
+
+
 
