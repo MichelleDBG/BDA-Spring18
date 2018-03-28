@@ -1,0 +1,577 @@
+---
+title: "MCMC_R_JAGS_STAN"
+author: "Michelle DePrenger-Levin"
+date: "March 27, 2018"
+output: html_document
+---
+
+# Gibbs sampler  
+#### For our bear example 
+
+Draw the directed acyclic diagram (DAG)
+```{r, eval=FALSE}
+install.packages("DiagrammeR")
+install.packages("dagR")
+install.packages("dagitty")
+```
+Load Packages
+```{r, message=FALSE, warning=FALSE}
+library(DiagrammeR) #http://rich-iannone.github.io/DiagrammeR/graph_creation.html
+library(knitr)
+library(actuar)
+library(rethinking)
+library(fitdistrplus)
+library(rstan)
+library(rjags)
+#library(dagR)
+#library(dagitty) #should be able to draw dashed lines, prettier figures, can't figure it out
+
+```
+#Bear example
+##DAG   
+The sub- and superscripts aren't knitting correctly
+```{r}
+mermaid("
+graph BT
+N(mu)-->Y(y<sub>ij</sub>)
+M(mu<sub>o</sub>)-->N(mu)
+S(sig<sup>2</sup><sub>o</sub>)-->N
+T(sig<sup>2</sup><sub>p</sub>)-->Y
+	        style Y fill:#FFFFFF, stroke-width:0px
+	        style M fill:#FFFFFF, stroke-width:0px
+	        style N fill:#FFFFFF, stroke-width:0px
+	        style S fill:#FFFFFF, stroke-width:0px
+	        style T fill:#FFFFFF, stroke-width:0px
+")
+
+```
+
+[$\mu$, $\sigma^2$~o~, $\sigma^2$~p~|y~i~] $\propto$ $\prod^{15}$~i=1~ [y~i~|$\mu$,
+$\sigma^2$~p~] * normal($\mu$|70,12)        
+Take easy appraoch, normal-normal conjugate distribution. 
+
+#Gibbs sampler
+A conjugate prior and can be computed analytically. This will speed up an MCMC. As a _Gibbs update_ don't use the ratio of the current and newly proposed, just update each value (because they're really smart choices).  
+From page 168, formulas 7.3.40 and 7.3.41  
+
+```{r}
+# normal likelihood with normal prior conjugate for mean, assuming variance is known
+# mu_0 is prior mean
+# sigma.sq_0 is prior variance of mean
+# varsigma.sq is known variance of data, based on average = 78.1 and variance = 10
+# varsigma.sq in equation= sigma_p in our example
+# Collect a sample of 15 bear territory sizes from our data
+y <- rnorm(15, 78.1, sqrt(10)) #standard deviation = sqrt of sigma squared
+
+# Calculate the probability density function of the likelihood
+likelihood <- density(y)
+h <- hist(y, plot=FALSE)
+
+# Draw the probability density function of the prior
+#vec <- seq(50,90,by=0.001)
+#prior <- dnorm(vec, 70, sqrt(12)) #prior study
+prior_0 <- rnorm(1000, 70, sqrt(12))
+
+# This works because we assume we know varsigma "..which is vertually never the case" -Hobbs and Hooten 2015, pg 168
+draw_distributionmean <- function(mu_0, sigma.sq_0, varsigma.sq, y){
+  n <- length(y)
+  mu_1 =((mu_0 / sigma.sq_0 + sum(y)/varsigma.sq)) / 
+    (1/sigma.sq_0 + length(y)/varsigma.sq)
+  sigma.sq_1 = 1/(1 / sigma.sq_0 + length(y) / varsigma.sq)
+  z = rnorm(1000, mu_1, sqrt(sigma.sq_1))
+  param = list(z = z, mu_1 = mu_1, sigma.sq_1 = sigma.sq_1)
+  param
+  }
+
+posterior <- draw_distributionmean(70,12,10,y)
+```
+
+
+```{r}  
+like <- hist(qnorm(seq(0.001,0.999,by=0.001),mean(y),sd(y)),plot=FALSE)
+  
+plot(density(prior_0), type="l", ylim=c(0,max(density(posterior$z)$y)),
+     xlim=c(min(c(h$breaks,prior_0)),max(c(h$breaks,prior_0))), #min and max of prior and data distributions
+     main="Distributions") 
+hist(y, freq=FALSE, add=TRUE, col=rgb(0,0,1,0.15))
+lines(like$breaks[-10],like$density, col="blue")
+lines(density(posterior$z),col="orange")
+legend("topleft", lty=1, col=c("orange","blue","black"), 
+       legend = c("Posterior","Likelihood","Prior"))
+```
+
+#Symmetric 
+```{r}
+set.seed(23)
+theta.star <- rnorm(1)
+theta.k <- rnorm(1)
+
+plot(seq(-4,5,by=0.01),dnorm(seq(-4,5,by=.01),theta.star),
+     type="l",col="red", ylab="density",xlab="",axes=FALSE)
+lines(seq(-4,5,by=0.01),dnorm(seq(-4,5,by=.01),theta.k))
+points(x = theta.k, y = dnorm(theta.k,theta.star),col="black")
+points(x = theta.star, y = dnorm(theta.star,theta.k),col="red")
+text(x = theta.k, y = dnorm(theta.k,theta.star)-0.1,labels = expression(theta^k))
+text(x = theta.star, y = dnorm(theta.star,theta.k)-0.1,labels = expression(theta^"*"))
+abline(h=dnorm(theta.k,theta.star),lty=5,col=rgb(0,0,0,0.25))
+abline(v=theta.star, col=rgb(1,0,0,0.25))
+abline(v=theta.k, col=rgb(0,0,0,0.25))
+legend("topright", legend = c(expression(paste("[",theta^k,"|",theta^"*","]")),
+                              expression(paste("[",theta^"*","|",theta^k,"]"))),
+       col=c("red","black"),
+       lty=1)
+
+```
+
+
+#Metropolis sampler  
+```{r}
+# mu ~ normal
+#Sampler 
+sampler <- function(data, samples, proposal_width, prior_mu,prior_sig2,sigma_p){
+  chain <- c()
+  prior_data_pdf <- density(rnorm(10000,prior_mu,sqrt(prior_sig2)))
+  mu_start <- rnorm(1, prior_mu, prior_sig2) #Pick random starting mu 
+  chain <- mu_start
+  mu_current <- mu_start
+
+  for(i in 2:samples){
+    likelihood_current <- prod(dnorm(data,mu_current,sqrt(sigma_p)))
+    #suggest a dumb Metropolis new position
+    mu_proposal <- rnorm(1,mu_current, sqrt(proposal_width)) 
+    likelihood_proposal <- prod(dnorm(data,mu_proposal,sqrt(sigma_p)))
+
+    #Prior
+    prior_current <- dnorm(mu_current,prior_mu, sqrt(prior_sig2))
+    prior_proposal <- dnorm(mu_proposal,prior_mu, sqrt(prior_sig2))
+    p_current <- likelihood_current*prior_current
+    p_proposal <- likelihood_proposal*prior_proposal
+    
+    # Accept proposal?
+    R <- p_proposal/p_current
+    accept <- if(R < 1){
+      u <- runif(1, min = 0,max = 1)
+      if(R < u) mu_proposal <- mu_current
+      }
+    chain[i] <- mu_proposal
+    mu_current <- mu_proposal #which is either same if rejected or new if accepted
+  }
+  
+  chain
+}
+
+```
+
+
+```{r}
+test <- sampler(data=y,samples=1000000,proposal_width = 10000,
+                prior_mu=70,prior_sig2=12, sigma_p=10)
+
+test[1] #The first guess
+plot(density(test), main="") #posterior
+points(test[1],0.1)
+
+plot(test[(length(test)-1000):length(test)],type="l") #the trace
+plot(test,type="l")
+
+```
+
+#Asymmetric   
+```{r}
+set.seed(23)
+theta.star <- rinvgamma(1,0.5)
+theta.k <- rinvgamma(1,0.5)
+
+plot(seq(-4,5,by=0.01),dinvgamma(seq(-4,5,by=.01),theta.star),
+     type="l",col="red", ylab="density",xlab="",axes=FALSE)
+lines(seq(-4,5,by=0.01),dinvgamma(seq(-4,5,by=.01),theta.k))
+points(x = theta.k, y = dinvgamma(theta.k,theta.star),col="black")
+points(x = theta.star, y = dinvgamma(theta.star,theta.k),col="red")
+text(x = theta.k, y = dinvgamma(theta.k,theta.star)-0.1,labels = expression(theta^k))
+text(x = theta.star, y = dinvgamma(theta.star,theta.k)-0.1,labels = expression(theta^"*"))
+abline(h=dinvgamma(theta.k,theta.star),lty=5,col=rgb(0,0,0,0.25))
+abline(v=theta.star, col=rgb(1,0,0,0.25))
+abline(v=theta.k, col=rgb(0,0,0,0.25))
+legend("topright", legend = c(expression(paste("[",theta^k,"|",theta^"*","]")),
+                              expression(paste("[",theta^"*","|",theta^k,"]"))),
+       col=c("red","black"),
+       lty=1)
+
+
+```
+
+Without a conjugate prior, Bayesian p-Values  
+```{r}
+# mu ~ normal
+#Sampler 
+
+#log likelihood instead of many tiny numbers. 
+
+sampler2 <- function(data, samples, proposal_width, prior_mu,prior_sig2,sigma_p){
+  chain <- c()
+  chain.sig <- c()
+  T.k <- c()
+  #prior_data_pdf <- density(rnorm(10000,prior_mu,sqrt(prior_sig2)))
+  mu_start <- rnorm(1, prior_mu, prior_sig2) #Pick random starting mu 
+#  sig_start <- actuar::rinvgamma(1, (prior_sig2/proposal_width)+2,
+#                                 prior_sig2*((prior_sig2/proposal_width)+1))
+  sig_start <- prior_sig2
+  chain <- mu_start
+  chain.sig <- sig_start
+  #initial indicator value for test statistic (mean) for Bayesian p-value
+  n <- length(data)
+  ndraws <- rnorm(n,mu_start)
+  # a little clunky, should allow for loop 1:samples....
+  T.k[1] <- if(mean(ndraws)>=mean(data)){
+      1
+    } else {
+      0
+    }
+  mu_current <- mu_start
+  sig_current <- sig_start
+
+  for(i in 2:samples){
+    ###########
+    # Keep sigma sq known, pick a mu
+    likelihood_current <- prod(dnorm(data,mu_current,sqrt(sigma_p)))
+    #suggest a dumb Metropolis new position
+    mu_proposal <- rnorm(1,mu_current, sqrt(proposal_width)) 
+    likelihood_proposal <- prod(dnorm(data,mu_proposal,sqrt(sigma_p)))
+
+    #Prior mu
+    prior_current <- dnorm(mu_current,prior_mu, sqrt(prior_sig2))
+    prior_proposal <- dnorm(mu_proposal,prior_mu, sqrt(prior_sig2))
+    p_current <- likelihood_current*prior_current
+    p_proposal <- likelihood_proposal*prior_proposal
+    ###########
+    
+    # Accept proposal?
+    R <- p_proposal/p_current
+    accept <- if(R < 1){
+      u <- runif(1, min = 0,max = 1)
+      if(R < u) mu_proposal <- mu_current
+      }
+    chain[i] <- mu_proposal
+    mu_current <- mu_proposal #which is either same if rejected or new if accepted
+    
+    ###########
+    # Keep mu known, pick a sigma sq
+    likelihood_current <- prod(dnorm(data,mu_current,sqrt(sig_current)))
+    #suggest new sigma
+    sig_proposal <- actuar::rinvgamma(1,(mu_current/sig_current)+2,
+                                 mu_current*((mu_current/sig_current)+1)) 
+    likelihood_proposal <- prod(dnorm(data,mu_current,sqrt(sig_proposal)))
+
+    #Prior sigma
+    prior_currentsig <- actuar::dinvgamma(sig_current,
+                                          (prior_sig2/proposal_width)+2,
+                                          prior_sig2*((prior_sig2/proposal_width)+1))
+    prior_proposalsig <- actuar::dinvgamma(sig_proposal,
+                                           (prior_sig2/proposal_width)+2,
+                                           prior_sig2*((prior_sig2/proposal_width)+1))
+    p_currentsig <- likelihood_current*prior_currentsig
+    p_proposalsig <- likelihood_proposal*prior_proposalsig
+    
+    # Accept propsal?
+    R <- p_proposalsig/p_currentsig
+  #  if(is.na(R))
+    accept <- if(R < 1){
+      u <- runif(1, min = 0,max = 1)
+      if(R < u) sig_proposal <- sig_current
+      }
+    chain.sig[i] <- sig_proposal
+    sig_current <- sig_proposal 
+    
+    
+      #Bayesian p-Value
+    ndraws <- rnorm(n,mu_current)
+    T.k[i] <- if(mean(ndraws)>=mean(data)){
+      1
+    } else {
+      0
+    }
+    
+    #Marginal Posterior Distributions
+    
+
+  }
+  
+  B_p <- sum(T.k)/samples
+  out <- list(chain,chain.sig,T.k,B_p)
+}
+
+```
+
+
+```{r}
+test2 <- sampler2(data=y,samples=10000,proposal_width = 1,
+                prior_mu=70,prior_sig2=12, sigma_p=10)
+
+test2[[1]][1]
+plot(density(test2[[1]]), main="")
+points(test2[[1]][1],0.1)
+
+#Bayes_p
+plot(density(test2[[3]]), main="Pb > 0.1 and < 0.9 adequately represents the data")
+points(test2[[4]], 0.1)
+
+#mu trace
+plot(test2[[1]][(length(test2[[1]])-1000):length(test2[[1]])],type="l") #the trace
+plot(test2[[1]],type="l")
+
+#sigma sq trace
+plot(test2[[2]][(length(test2[[2]])-1000):length(test2[[2]])],type="l") #the trace
+plot(test2[[2]],type="l")
+
+plot(density(test2[[2]]), main="")
+
+```
+
+
+#Full conditional Gibbs
+[$\alpha$,$\beta$,*z*,$\varsigma$|*Y*] $\propto$ $\prod^n$~i=1~ $\prod^J$~j=1~ [y~i,j~ | z,$\sigma^2$][z|g($\alpha$,$\beta$,x),$\varsigma$][$\alpha$][$\beta$][$\varsigma$][$\sigma^2$]
+```{r}
+J<-15 #site
+n<-100  #replicates
+mu_prior <- 30
+sigma_prior <- 0.2
+y<-rnorm(J*n,mu_prior,sigma_prior)
+x<-runif(J,1,150) #rainfall or some covariate
+
+
+sampler_full <- function(data, samples, x, proposal_width, Metropolis_Hastings = TRUE, 
+                         init_alpha,init_beta,init_sigma,init_varsigma){
+  chain.alpha <- c()
+  chain.beta <- c()
+  chain.z <- c()
+  chain.sig <- c()
+  chain.varsigma <- c()
+  n<-length(data)
+  T.k <- c() #indicator test variable for Bayesian p-value
+  T.k[1]<-0.5 #don't have a prior ... this isnt' quite right
+
+    #Initial values
+  chain.alpha[1]<-runif(1,0,init_alpha)
+  chain.beta[1]<-runif(1,0,init_beta)
+  chain.z[1]<-rlnorm(1,log(mean(data))-((1/2)*(log((init_sigma+(mean(data)^2))/mean(data)^2))),
+                                              sqrt(log((init_sigma+mean(data)^2)/mean(data)^2)))
+  chain.sig[1]<-rinvgamma(1,0.001,0.001)
+  chain.varsigma[1]<-rinvgamma(1,0.001,0.001)
+  
+  for(i in 2:samples)
+  # z: the true value
+  #likelihood of y conditional on z and sigma square
+  z_now <- chain.z[i-1]
+  likelihood.now <- prod(dlnorm(data,log(z_now)-((1/2)*(log((chain.sig[i-1]+
+                     (z_now^2))/z_now^2))),
+                     sqrt(log((chain.sig[i-1]+z_now^2)/z_now^2))))
+  z_proposal <- rlnorm(1,log(z_now)-((1/2)*(log((chain.sig[i-1]+(z_now^2))/z_now^2))),
+                                              sqrt(log((chain.sig[i-1]+z_now^2)/z_now^2)))
+  likelihood.proposal <- prod(dlnorm(data,log(z_proposal)-((1/2)*(log((chain.sig[i-1]+
+                     (z_proposal^2))/z_proposal^2))),
+                     sqrt(log((chain.sig[i-1]+z_proposal^2)/z_proposal^2))))
+  prior_now <- dlnorm(z_now,log(z_now)-((1/2)*(log((chain.sig[i-1]+
+                     (z_now^2))/z_now^2))),
+                     sqrt(log((chain.sig[i-1]+z_now^2)/z_now^2)))
+  prior_proposal <- dlnorm(z_proposal,log(z_proposal)-((1/2)*(log((chain.sig[i-1]+
+                     (z_proposal^2))/z_proposal^2))),
+                     sqrt(log((chain.sig[i-1]+z_proposal^2)/z_proposal^2)))
+  p_now <- likelihood.now*prior_now
+  p_proposal <- likelihood.proposal*prior_proposal
+  
+  if(Metropolis_Hastings == FALSE){
+  # Hastings
+  # Accept proposal?
+    R <- p_proposal/p_now
+    accept <- if(R < 1){
+      u <- runif(1, min = 0,max = 1)
+      if(R < u) chain.z[i] <- z_now
+    } else {
+      chain[i] <- z_proposal
+    }
+  } else {
+    #Metropolis-Hastings updates
+    R <- (p_proposal/p_now) * (dlnorm(z_now,log(z_proposal)-((1/2)*(log((chain.sig[i-1]+
+                     (z_proposal^2))/z_proposal^2))),
+                     sqrt(log((chain.sig[i-1]+z_proposal^2)/z_proposal^2)))/
+                        dlnorm(z_proposal,log(z_now)-((1/2)*(log((chain.sig[i-1]+
+                     (z_now^2))/z_now^2))),
+                     sqrt(log((chain.sig[i-1]+z_now^2)/z_now^2))))
+    accept <- if(R < 1){
+      u <- runif(1, min = 0,max = 1)
+      if(R < u) chain.z[i] <- z_now
+    } else {
+      chain[i] <- z_proposalz
+    }
+    
+    }
+  #Bayesian p-value, just for z or what? for each? want for each, no?
+  ndraws<-rlnorm(n,log(z_now)-((1/2)*(log((chain.sig[i-1]+
+                     (z_now^2))/z_now^2))),
+                     sqrt(log((chain.sig[i-1]+z_now^2)/z_now^2)))
+  T.k[i]<-if(mean(ndraws)>=mean(data)){
+    1
+  } else {
+    0
+  }
+  
+  alpha_now <- chain.alpha[i-1]
+  #page 163, assume deterministic model is a Michaelis-Menten alpha*x/(beta+x)
+  #if wanted a linear model something like alpha*x + beta? 
+  alphaL <- (alpha_now*x)/(chain.beta[i-1]+x)
+  likelihood.now <- dlnorm(log(chain[i]),log(alphaL)-((1/2)*(log((chain.sig[i-1]+
+                     (alphaL^2))/alphaL^2))),
+                     sqrt(log((chain.sig[i-1]+alphaL^2)/alphaL^2)))
+  
+  sig_start <- actuar::rinvgamma(1, (prior_sig2/sqrt(proposal_width))+2,
+                                 prior_sig2*((prior_sig2/proposal_width)+1))
+
+  #initial indicator value for test statistic (mean) for Bayesian p-value
+  n <- length(data)
+  ndraws <- rnorm(n,mu_start)
+  # a little clunky, should allow for loop 1:samples....
+  T.k[1] <- if(mean(ndraws)>=mean(data)){
+      1
+    } else {
+      0
+    }
+  mu_current <- mu_start
+  sig_current <- sig_start
+
+  for(i in 2:samples){
+    ###########
+    # Keep sigma sq known, pick a mu
+    likelihood_current <- prod(dnorm(data,mu_current,sqrt(sigma_p)))
+    #suggest a dumb Metropolis new position
+    mu_proposal <- rnorm(1,mu_current, sqrt(proposal_width)) 
+    likelihood_proposal <- prod(dnorm(data,mu_proposal,sqrt(sigma_p)))
+
+    #Prior mu
+    prior_current <- dnorm(mu_current,prior_mu, sqrt(prior_sig2))
+    prior_proposal <- dnorm(mu_proposal,prior_mu, sqrt(prior_sig2))
+    p_current <- likelihood_current*prior_current
+    p_proposal <- likelihood_proposal*prior_proposal
+    ###########
+    
+    
+    
+    ###########
+    # Keep mu known, pick a sigma sq
+    likelihood_current <- prod(dnorm(data,mu_current,sqrt(sigma_p)))
+    #suggest new sigma
+    sig_proposal <- actuar::rinvgamma(1,(mu_current/sig_start)+2,
+                                 mu_current*((mu_current/sig_start)+1)) 
+    likelihood_proposal <- prod(dnorm(data,mu_current,sqrt(sig_proposal)))
+
+    #Prior sigma
+    prior_currentsig <- actuar::dinvgamma(sig_current,
+                                          (prior_sig2/sqrt(proposal_width))+2,
+                                          prior_sig2*((prior_sig2/sqrt(proposal_width))+1))
+    prior_proposalsig <- actuar::dinvgamma(sig_proposal,
+                                           (prior_sig2/sqrt(proposal_width))+2,
+                                           prior_sig2*((prior_sig2/sqrt(proposal_width))+1))
+    p_currentsig <- likelihood_current*prior_currentsig
+    p_proposalsig <- likelihood_proposal*prior_proposalsig
+    
+    # Accept propsal?
+    R <- p_proposalsig/p_currentsig
+    accept <- if(R < 1){
+      u <- runif(1, min = 0,max = 1)
+      if(R < u) sig_proposal <- sig_current
+      }
+    chain.sig[i] <- sig_proposal
+    sig_current <- sig_proposal 
+    
+    
+      #Bayesian p-Value
+    ndraws <- rnorm(n,mu_current)
+    T.k[i] <- if(mean(ndraws)>=mean(data)){
+      1
+    } else {
+      0
+    }
+    
+    #Marginal Posterior Distributions
+    
+
+  }
+  
+  B_p <- sum(T.k)/samples
+  out <- list(chain,chain.sig,T.k,B_p)
+}
+
+```
+
+
+
+Exercise 3: using for loops  
+write a code framgment to set vague normal priors for 5 regression coefficients dnorm(0,10e^-6)
+```{r}
+
+for(i in 1:n){
+  b[i] ~ dnorm(0,10e-6)
+}
+
+```
+
+
+#Practice converting Scott's data and code for Jags from stan  
+  
+###Foraging Trees of Flammulated Owls  
+```{r}
+forage <- read.csv("forage.csv")
+library(rethinking)
+library(fitdistrplus)
+library(rstan)
+```
+
+    Trees available to birds, not used vs. trees used  
+    Bernoulli(p) probability that the tree was used, what's predictive of probability of use   
+    Stan is Hamiltonian sampler. Physics model to let parameters move around sample space. Guess with momentum in a direction and that change. Calculates time spent in areas, momentum along gradient, less likely to get stuck even with messy posterior. 
+    Have to pass code in from another coder (like rstan)   
+    library(rethinking) translates code from more R like to stan text string.   
+        fitdist helps pick a distribution the variables are coming from...  
+        cbi_test <-   #burn severity, try to fit normal using moment matching  Can propose multiple and pick one that fits best   
+        P-P is probabilities (instead of quantiles)
+        Look at AIC and then look at the QQ plot. 
+        Then scale by difference in normal mean vs. the estimate of the fit distribution   
+        
+    Stan is less efficient if you keep extraneous columns that are not using. 
+    Rethinking package should be able to give you the stan code (to learn and understand what it's doing)
+       <http://xcelab.net/rm/statistical-rethinking/>
+
+
+```{r}
+forage$terr_in <- coerce_index(forage$terr)
+#make dummy variables
+forage$psme <- as.numeric(forage$foc_sp == 1)
+forage$pipo <- as.numeric(forage$foc_sp == 2)
+forage$potr <- as.numeric(forage$foc_sp == 3)
+forage$slope_b <- as.numeric(forage$slope_pos == 1)
+forage$slope_l <- as.numeric(forage$slope_pos == 2)
+forage$slope_u <- as.numeric(forage$slope_pos == 3)
+forage$slope_t <- as.numeric(forage$slope_pos == 4)
+
+#transform cclos to proportion instead of percentage
+forage$cclos <- (forage$cclos/100)
+#fit predictor ditributions
+fd.dens.over <- fitdist(forage$dens_over, distr = "lnorm", method = "mle")
+summary(fd.dens.over)
+
+plot(fd.dens.over)
+
+```
+
+```{r}
+fd.dens.under <- fitdist(forage$dens_under, distr = "lnorm", method = "mle")
+summary(fd.dens.under)
+```
+
+  
+      1. Posterior predictive check - is the distribution of the posterior more extreme than distribution of the data?  
+        a) test statistic (mean, var, $\chisquare$ )
+      2.     
+      
+
+
+
