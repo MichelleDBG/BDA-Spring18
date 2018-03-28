@@ -200,6 +200,8 @@ legend("topright", legend = c(expression(paste("[",theta^k,"|",theta^"*","]")),
 
 ```
 
+# Complete the sampler.   
+## The sampler is not allowing for $\sigma^2$ to vary.    
 Without a conjugate prior, Bayesian p-Values  
 ```{r}
 # mu ~ normal
@@ -319,7 +321,7 @@ points(test2[[4]], 0.1)
 plot(test2[[1]][(length(test2[[1]])-1000):length(test2[[1]])],type="l") #the trace
 plot(test2[[1]],type="l")
 
-#sigma sq trace
+#sigma sq trace - 
 plot(test2[[2]][(length(test2[[2]])-1000):length(test2[[2]])],type="l") #the trace
 plot(test2[[2]],type="l")
 
@@ -328,7 +330,8 @@ plot(density(test2[[2]]), main="")
 ```
 
 
-#Full conditional Gibbs
+#Full conditional Gibbs   
+### Complete the sampler, test other distributions... 
 [$\alpha$,$\beta$,*z*,$\varsigma$|*Y*] $\propto$ $\prod^n$~i=1~ $\prod^J$~j=1~ [y~i,j~ | z,$\sigma^2$][z|g($\alpha$,$\beta$,x),$\varsigma$][$\alpha$][$\beta$][$\varsigma$][$\sigma^2$]
 ```{r}
 J<-15 #site
@@ -504,6 +507,9 @@ sampler_full <- function(data, samples, x, proposal_width, Metropolis_Hastings =
 
 
 
+# Complete the BayesLabs    
+### <https://github.com/nthobbs50/BayesLabs/tree/master/Labs>   
+Do JAGS labs.
 Exercise 3: using for loops  
 write a code framgment to set vague normal priors for 5 regression coefficients dnorm(0,10e^-6)
 ```{r}
@@ -518,7 +524,7 @@ for(i in 1:n){
 #Practice converting Scott's data and code for Jags from stan  
   
 ###Foraging Trees of Flammulated Owls  
-```{r}
+```{r, eval=FALSE}
 forage <- read.csv("forage.csv")
 library(rethinking)
 library(fitdistrplus)
@@ -541,7 +547,7 @@ library(rstan)
        <http://xcelab.net/rm/statistical-rethinking/>
 
 
-```{r}
+```{r, eval=FALSE}
 forage$terr_in <- coerce_index(forage$terr)
 #make dummy variables
 forage$psme <- as.numeric(forage$foc_sp == 1)
@@ -562,7 +568,7 @@ plot(fd.dens.over)
 
 ```
 
-```{r}
+```{r, eval=FALSE}
 fd.dens.under <- fitdist(forage$dens_under, distr = "lnorm", method = "mle")
 summary(fd.dens.under)
 ```

@@ -181,8 +181,8 @@ $(document).ready(function () {
 <p><strong>Q1.</strong> Create the design matrix for modeling the effect of different leg sets on the observed friction coefficient. Provide only the R code for doing this (it’s a long matrix), and write a few sentences to describe the components of the matrix (i.e. say what comprise the rows, columns, and values in each cell).</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc3BpZGVyLmRtW2MoNjc6NzAsOTk6MTAwLDI0MDoyNDEpLF1cblxuYGBgIn0= -->
-<pre class="r"><code>spider.dm[c(67:70,99:100,240:241),]
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc3BpZGVyLmRtW2MoNjc6NzAsOTk6MTAwLDI0MDoyNDEpLF0gI3N1YnNldCBvZiB0aGUgZGVzaWduIG1hdHJpeFxuXG5gYGAifQ== -->
+<pre class="r"><code>spider.dm[c(67:70,99:100,240:241),] #subset of the design matrix
 </code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-output-begin eyJkYXRhIjoiICAgIGZhY3RvcihzcGlkZXIkbGVnKUwxIGZhY3RvcihzcGlkZXIkbGVnKUwyIGZhY3RvcihzcGlkZXIkbGVnKUwzIGZhY3RvcihzcGlkZXIkbGVnKUw0XG42NyAgICAgICAgICAgICAgICAgICAgIDEgICAgICAgICAgICAgICAgICAgIDAgICAgICAgICAgICAgICAgICAgIDAgICAgICAgICAgICAgICAgICAgIDBcbjY4ICAgICAgICAgICAgICAgICAgICAgMSAgICAgICAgICAgICAgICAgICAgMCAgICAgICAgICAgICAgICAgICAgMCAgICAgICAgICAgICAgICAgICAgMFxuNjkgICAgICAgICAgICAgICAgICAgICAwICAgICAgICAgICAgICAgICAgICAxICAgICAgICAgICAgICAgICAgICAwICAgICAgICAgICAgICAgICAgICAwXG43MCAgICAgICAgICAgICAgICAgICAgIDAgICAgICAgICAgICAgICAgICAgIDEgICAgICAgICAgICAgICAgICAgIDAgICAgICAgICAgICAgICAgICAgIDBcbjk5ICAgICAgICAgICAgICAgICAgICAgMCAgICAgICAgICAgICAgICAgICAgMCAgICAgICAgICAgICAgICAgICAgMSAgICAgICAgICAgICAgICAgICAgMFxuMTAwICAgICAgICAgICAgICAgICAgICAwICAgICAgICAgICAgICAgICAgICAwICAgICAgICAgICAgICAgICAgICAxICAgICAgICAgICAgICAgICAgICAwXG4yNDAgICAgICAgICAgICAgICAgICAgIDAgICAgICAgICAgICAgICAgICAgIDAgICAgICAgICAgICAgICAgICAgIDAgICAgICAgICAgICAgICAgICAgIDFcbjI0MSAgICAgICAgICAgICAgICAgICAgMCAgICAgICAgICAgICAgICAgICAgMCAgICAgICAgICAgICAgICAgICAgMCAgICAgICAgICAgICAgICAgICAgMVxuIn0= -->
@@ -199,14 +199,54 @@ $(document).ready(function () {
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <pre><code>This design matrix acts as a boolean matrix setting the value in a cell to 1 when that individual (row) has the friction value for the corresponding leg pair in the appropriate column. Column 1 (&quot;L1&quot;) has a 1 in rows with a cooresponding &quot;L1&quot; in the row of the spider data frame leg column and a 0 in all other rows. Likewise, column 2 of the design matrix only has 1s in rows for which the spider data frame leg column is &quot;L2&quot;. This pattern is continued for &quot;L3&quot; and &quot;L4&quot;.  </code></pre>
+<p>If you are asking for the effect of different leg sets and whether the legs are pushing or pulling, then the design matrix becomes:</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc3BpZGVyLmZ1bGwuZG1bYygxOjIsNjc6NzAsODA6ODUsOTk6MTAwLDI0MDoyNDEsbnJvdyhzcGlkZXIpKSxdICNzdWJzZXQgb2YgdGhlIGRlc2lnbiBtYXRyaXhcblxuYGBgIn0= -->
+<pre class="r"><code>spider.full.dm[c(1:2,67:70,80:85,99:100,240:241,nrow(spider)),] #subset of the design matrix
+</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiICAgIChJbnRlcmNlcHQpIGZhY3RvcihsZWcpTDIgZmFjdG9yKGxlZylMMyBmYWN0b3IobGVnKUw0IGZhY3Rvcih0eXBlKXB1c2hcbjEgICAgICAgICAgICAgMSAgICAgICAgICAgICAwICAgICAgICAgICAgIDAgICAgICAgICAgICAgMCAgICAgICAgICAgICAgICAwXG4yICAgICAgICAgICAgIDEgICAgICAgICAgICAgMCAgICAgICAgICAgICAwICAgICAgICAgICAgIDAgICAgICAgICAgICAgICAgMFxuNjcgICAgICAgICAgICAxICAgICAgICAgICAgIDAgICAgICAgICAgICAgMCAgICAgICAgICAgICAwICAgICAgICAgICAgICAgIDFcbjY4ICAgICAgICAgICAgMSAgICAgICAgICAgICAwICAgICAgICAgICAgIDAgICAgICAgICAgICAgMCAgICAgICAgICAgICAgICAxXG42OSAgICAgICAgICAgIDEgICAgICAgICAgICAgMSAgICAgICAgICAgICAwICAgICAgICAgICAgIDAgICAgICAgICAgICAgICAgMFxuNzAgICAgICAgICAgICAxICAgICAgICAgICAgIDEgICAgICAgICAgICAgMCAgICAgICAgICAgICAwICAgICAgICAgICAgICAgIDBcbjgwICAgICAgICAgICAgMSAgICAgICAgICAgICAxICAgICAgICAgICAgIDAgICAgICAgICAgICAgMCAgICAgICAgICAgICAgICAwXG44MSAgICAgICAgICAgIDEgICAgICAgICAgICAgMSAgICAgICAgICAgICAwICAgICAgICAgICAgIDAgICAgICAgICAgICAgICAgMFxuODIgICAgICAgICAgICAxICAgICAgICAgICAgIDEgICAgICAgICAgICAgMCAgICAgICAgICAgICAwICAgICAgICAgICAgICAgIDBcbjgzICAgICAgICAgICAgMSAgICAgICAgICAgICAxICAgICAgICAgICAgIDAgICAgICAgICAgICAgMCAgICAgICAgICAgICAgICAwXG44NCAgICAgICAgICAgIDEgICAgICAgICAgICAgMSAgICAgICAgICAgICAwICAgICAgICAgICAgIDAgICAgICAgICAgICAgICAgMVxuODUgICAgICAgICAgICAxICAgICAgICAgICAgIDEgICAgICAgICAgICAgMCAgICAgICAgICAgICAwICAgICAgICAgICAgICAgIDFcbjk5ICAgICAgICAgICAgMSAgICAgICAgICAgICAwICAgICAgICAgICAgIDEgICAgICAgICAgICAgMCAgICAgICAgICAgICAgICAwXG4xMDAgICAgICAgICAgIDEgICAgICAgICAgICAgMCAgICAgICAgICAgICAxICAgICAgICAgICAgIDAgICAgICAgICAgICAgICAgMFxuMjQwICAgICAgICAgICAxICAgICAgICAgICAgIDAgICAgICAgICAgICAgMCAgICAgICAgICAgICAxICAgICAgICAgICAgICAgIDBcbjI0MSAgICAgICAgICAgMSAgICAgICAgICAgICAwICAgICAgICAgICAgIDAgICAgICAgICAgICAgMSAgICAgICAgICAgICAgICAwXG4yODIgICAgICAgICAgIDEgICAgICAgICAgICAgMCAgICAgICAgICAgICAwICAgICAgICAgICAgIDEgICAgICAgICAgICAgICAgMVxuIn0= -->
+<pre><code>    (Intercept) factor(leg)L2 factor(leg)L3 factor(leg)L4 factor(type)push
+1             1             0             0             0                0
+2             1             0             0             0                0
+67            1             0             0             0                1
+68            1             0             0             0                1
+69            1             1             0             0                0
+70            1             1             0             0                0
+80            1             1             0             0                0
+81            1             1             0             0                0
+82            1             1             0             0                0
+83            1             1             0             0                0
+84            1             1             0             0                1
+85            1             1             0             0                1
+99            1             0             1             0                0
+100           1             0             1             0                0
+240           1             0             0             1                0
+241           1             0             0             1                0
+282           1             0             0             1                1</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
 <p><strong>Q2.</strong> How many parameters in this design? Explain what they are and what information they provide, referencing the design matrix you produced in Q1. Then provide the parameter matrix.</p>
-<p>There are four parameters in this design. The intercept, <span class="math inline">\(\beta\)</span><sub>0</sub>, which is the mean of friction from L1 leg pair. <span class="math inline">\(\beta\)</span><sub>1</sub> is the offset from the intercept to the mean of L2. legL3, <span class="math inline">\(\beta\)</span><sub>2</sub>, is the effect size of L3 from L1 (<span class="math inline">\(\beta\)</span><sub>0</sub> + <span class="math inline">\(\beta\)</span><sub>2</sub> = mean friction of L3). The final parameter is <span class="math inline">\(\beta\)</span><sub>3</sub> which is the effect size of L4 (the offset from L1 to L4).<br />
+<p>There are four parameters in the leg design. The intercept, <span class="math inline">\(\beta_1\)</span>, which is the mean of friction from L1 leg pair. <span class="math inline">\(\beta_2\)</span> is the offset from the intercept to the mean of L2. legL3, <span class="math inline">\(\beta_3\)</span>, is the effect size of L3 from L1 (<span class="math inline">\(\beta_1\)</span> + <span class="math inline">\(\beta_3\)</span> = mean friction of L3). The final parameter is <span class="math inline">\(\beta_4\)</span> which is the effect size of L4 (the offset from L1 to L4).<br />
+<span class="math display">\[
+{\left(\begin{array}{cc}
+  \beta_{1}\\
+  \beta_{2}\\
+  \beta_{3}\\
+  \beta_{4}
+  \end{array}\right)
+}
+\]</span></p>
+<p>This full design matrix is not boolean (missing the “+0”). In this case the Intercept, <span class="math inline">\(\beta_0\)</span>, is the mean friction of L1 when pulling. The last column, <span class="math inline">\(\beta_4\)</span>, is the effect size of pushing so mean pushing friction of L1 is <span class="math inline">\(\beta_0\)</span> + <span class="math inline">\(\beta_4\)</span>. The parameters <span class="math inline">\(\beta_j\)</span> (j = 1-3) are the offset of pulling friction for each leg (L2 to L4). Additionally adding <span class="math inline">\(\beta_4\)</span> to any of these will give the effect size of pushing to each leg pair.<br />
 <span class="math display">\[
 {\left(\begin{array}{cc}
   \beta_{0}\\
   \beta_{1}\\
   \beta_{2}\\
-  \beta_{3}
+  \beta_{3}\\
+  \beta_{4}
   \end{array}\right)
 }
 \]</span></p>
@@ -334,7 +374,7 @@ F-statistic:   801 on 1 and 280 DF,  p-value: &lt; 2.2e-16</code></pre>
 <!-- rnb-output-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
-<p>The legs that were pushing has a mean value of 0.43. This is the intercept plus the effect size of the type push estimate.</p>
+<p>The legs that were pushing have a mean value of 0.43. This is the intercept plus the effect size of the type push estimate.</p>
 <p><strong>Q4.</strong> Fit the linear model for the design you provided in Q1 and write down the value for the mean friction coefficient for each of the 4 leg sets.</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
@@ -350,76 +390,66 @@ Coefficients:
 (Intercept)        legL2        legL3        legL4  
      0.6644       0.1719       0.1605       0.2813  </code></pre>
 <!-- rnb-output-end -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc3BpZGVyLmxtIDwtIGxtKGZyaWN0aW9ufmxlZyxkYXRhPXNwaWRlcilcbnByaW50KFwibWVhbiBmcmljdGlvbiBjb2VmZmljaWVudCBmb3IgTDE6XCIpXG5gYGAifQ== -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubG0oZnJpY3Rpb25+bGVnKzAsZGF0YT1zcGlkZXIpICMgTXkgZmlyc3QgZGVzaWduIG1hdHJpeFxuYGBgIn0= -->
+<pre class="r"><code>lm(friction~leg+0,data=spider) # My first design matrix</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiXG5DYWxsOlxubG0oZm9ybXVsYSA9IGZyaWN0aW9uIH4gbGVnICsgMCwgZGF0YSA9IHNwaWRlcilcblxuQ29lZmZpY2llbnRzOlxuIGxlZ0wxICAgbGVnTDIgICBsZWdMMyAgIGxlZ0w0ICBcbjAuNjY0NCAgMC44MzYzICAwLjgyNDkgIDAuOTQ1NyAgXG4ifQ== -->
+<pre><code>
+Call:
+lm(formula = friction ~ leg + 0, data = spider)
+
+Coefficients:
+ legL1   legL2   legL3   legL4  
+0.6644  0.8363  0.8249  0.9457  </code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc3BpZGVyLmxtIDwtIGxtKGZyaWN0aW9ufmxlZyxkYXRhPXNwaWRlcilcbnNwaWRlci5sbS5mb3JjZWludHplcm8gPC0gbG0oZnJpY3Rpb25+bGVnKzAsZGF0YT1zcGlkZXIpXG5jb2VmcyA8LSBjKFwiTDFcIixcIkwyXCIsXCJMM1wiLFwiTDRcIilcbmNvZWZzLmZ1bGwgPC0gZXhwYW5kLmdyaWQoYyhcInB1bGxcIixcInB1c2hcIiksYyhcIkwxXCIsXCJMMlwiLFwiTDNcIixcIkw0XCIpKVxuZm9yKGkgaW4gMTo0KXtcbiAgcHJpbnQocGFzdGUoXCJNZWFuIGZyaWN0aW9uIGNvZWZmaWNpZW50IGZvciBcIiwgY29lZnNbaV0sIFwiOiBtZWFuID0gXCIsXG4gICAgICAgICAgICByb3VuZChtZWFuKHNwaWRlciRmcmljdGlvbltzcGlkZXIkbGVnPT1jb2Vmc1tpXV0pLDIpLCAjTDFcbiAgICAgICAgICAgIFwiLCBiZXRhX1wiLCBpLTEsXCIgPSBcIixcbiAgICAgICAgICAgIHJvdW5kKHNwaWRlci5sbS5mb3JjZWludHplcm8kY29lZmZpY2llbnRzW2ldLDIpLCBzZXA9XCJcIikpXG4gIGlmKGk+MSl7XG4gICAgcHJpbnQocGFzdGUoXCIgICpFZmZlY3Qgc2l6ZSBmb3IgY29lZmZpY2llbnQgXCIsIGNvZWZzW2ldLCBcIiwgYmV0YV9cIixcbiAgICAgICAgICAgICAgICBpLTEsIFwiID0gXCIsXG4gICAgICAgICAgICAgICAgcm91bmQoc3BpZGVyLmxtJGNvZWZmaWNpZW50c1tpXSwgMiksIHNlcD1cIlwiKSlcbiAgfVxufVxuYGBgIn0= -->
 <pre class="r"><code>spider.lm &lt;- lm(friction~leg,data=spider)
-print(&quot;mean friction coefficient for L1:&quot;)</code></pre>
+spider.lm.forceintzero &lt;- lm(friction~leg+0,data=spider)
+coefs &lt;- c(&quot;L1&quot;,&quot;L2&quot;,&quot;L3&quot;,&quot;L4&quot;)
+coefs.full &lt;- expand.grid(c(&quot;pull&quot;,&quot;push&quot;),c(&quot;L1&quot;,&quot;L2&quot;,&quot;L3&quot;,&quot;L4&quot;))
+for(i in 1:4){
+  print(paste(&quot;Mean friction coefficient for &quot;, coefs[i], &quot;: mean = &quot;,
+            round(mean(spider$friction[spider$leg==coefs[i]]),2), #L1
+            &quot;, beta_&quot;, i-1,&quot; = &quot;,
+            round(spider.lm.forceintzero$coefficients[i],2), sep=&quot;&quot;))
+  if(i&gt;1){
+    print(paste(&quot;  *Effect size for coefficient &quot;, coefs[i], &quot;, beta_&quot;,
+                i-1, &quot; = &quot;,
+                round(spider.lm$coefficients[i], 2), sep=&quot;&quot;))
+  }
+}</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiWzFdIFwibWVhbiBmcmljdGlvbiBjb2VmZmljaWVudCBmb3IgTDE6XCJcbiJ9 -->
-<pre><code>[1] &quot;mean friction coefficient for L1:&quot;</code></pre>
+<!-- rnb-output-begin eyJkYXRhIjoiWzFdIFwiTWVhbiBmcmljdGlvbiBjb2VmZmljaWVudCBmb3IgTDE6IG1lYW4gPSAwLjY2LCBiZXRhXzAgPSAwLjY2XCJcblsxXSBcIk1lYW4gZnJpY3Rpb24gY29lZmZpY2llbnQgZm9yIEwyOiBtZWFuID0gMC44NCwgYmV0YV8xID0gMC44NFwiXG5bMV0gXCIgICpFZmZlY3Qgc2l6ZSBmb3IgY29lZmZpY2llbnQgTDIsIGJldGFfMSA9IDAuMTdcIlxuWzFdIFwiTWVhbiBmcmljdGlvbiBjb2VmZmljaWVudCBmb3IgTDM6IG1lYW4gPSAwLjgyLCBiZXRhXzIgPSAwLjgyXCJcblsxXSBcIiAgKkVmZmVjdCBzaXplIGZvciBjb2VmZmljaWVudCBMMywgYmV0YV8yID0gMC4xNlwiXG5bMV0gXCJNZWFuIGZyaWN0aW9uIGNvZWZmaWNpZW50IGZvciBMNDogbWVhbiA9IDAuOTUsIGJldGFfMyA9IDAuOTVcIlxuWzFdIFwiICAqRWZmZWN0IHNpemUgZm9yIGNvZWZmaWNpZW50IEw0LCBiZXRhXzMgPSAwLjI4XCJcbiJ9 -->
+<pre><code>[1] &quot;Mean friction coefficient for L1: mean = 0.66, beta_0 = 0.66&quot;
+[1] &quot;Mean friction coefficient for L2: mean = 0.84, beta_1 = 0.84&quot;
+[1] &quot;  *Effect size for coefficient L2, beta_1 = 0.17&quot;
+[1] &quot;Mean friction coefficient for L3: mean = 0.82, beta_2 = 0.82&quot;
+[1] &quot;  *Effect size for coefficient L3, beta_2 = 0.16&quot;
+[1] &quot;Mean friction coefficient for L4: mean = 0.95, beta_3 = 0.95&quot;
+[1] &quot;  *Effect size for coefficient L4, beta_3 = 0.28&quot;</code></pre>
 <!-- rnb-output-end -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIG1lYW4oc3BpZGVyJGZyaWN0aW9uW3NwaWRlciRsZWc9PVwiTDFcIl0pICNMMVxuYGBgIn0= -->
-<pre class="r"><code> mean(spider$friction[spider$leg==&quot;L1&quot;]) #L1</code></pre>
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjpbInByaW50KHBhc3RlKFwiTWVhbiBmcmljdGlvbiBjb2VmZmljaWVudCBmb3IgTDE6ICBtZWFuPVwiLCIsIiAgICAgICAgICAgIHJvdW5kKG1lYW4oc3BpZGVyJGZyaWN0aW9uW3NwaWRlciRsZWc9PVwiTDFcIl0pLDIpLCAjTDEiLCIgICAgICAgICAgICBcIiwgYmV0YV8wID0gXCIsIiwiICAgICAgICAgICAgc3BpZGVyLmxtLmZvcmNlaW50emVybyRjb2VmZmljaWVudHNbMV0sIHNlcD1cIiBcIikpIiwiIiwicHJpbnQoXCJNZWFuIGZyaWN0aW9uIGNvZWZmaWNpZW50IGZvciBMMjpcIikgICIsIiBtZWFuKHNwaWRlciRmcmljdGlvbltzcGlkZXIkbGVnPT1cIkwyXCJdKSAjTDIiLCIgc3BpZGVyLmxtJGNvZWZmaWNpZW50c1sxXStzcGlkZXIubG0kY29lZmZpY2llbnRzWzJdIiwiIiwicHJpbnQoXCJNZWFuIGZyaWN0aW9uIGNvZWZmaWNpZW50IGZvciBMMzpcIikiLCIgbWVhbihzcGlkZXIkZnJpY3Rpb25bc3BpZGVyJGxlZz09XCJMM1wiXSkgI0wzIiwiIHNwaWRlci5sbSRjb2VmZmljaWVudHNbMV0rc3BpZGVyLmxtJGNvZWZmaWNpZW50c1szXSIsIiIsInByaW50KFwiTWVhbiBmcmljdGlvbiBjb2VmZmljaWVudCBmb3IgTDQ6XCIpICIsIiBtZWFuKHNwaWRlciRmcmljdGlvbltzcGlkZXIkbGVnPT1cIkw0XCJdKSAjTDQiLCIgc3BpZGVyLmxtJGNvZWZmaWNpZW50c1sxXStzcGlkZXIubG0kY29lZmZpY2llbnRzWzRdIl19 -->
+<pre class="r"><code>print(paste(&quot;Mean friction coefficient for L1:  mean=&quot;,
+            round(mean(spider$friction[spider$leg==&quot;L1&quot;]),2), #L1
+            &quot;, beta_0 = &quot;,
+            spider.lm.forceintzero$coefficients[1], sep=&quot; &quot;))
+
+print(&quot;Mean friction coefficient for L2:&quot;)  
+ mean(spider$friction[spider$leg==&quot;L2&quot;]) #L2
+ spider.lm$coefficients[1]+spider.lm$coefficients[2]
+
+print(&quot;Mean friction coefficient for L3:&quot;)
+ mean(spider$friction[spider$leg==&quot;L3&quot;]) #L3
+ spider.lm$coefficients[1]+spider.lm$coefficients[3]
+
+print(&quot;Mean friction coefficient for L4:&quot;) 
+ mean(spider$friction[spider$leg==&quot;L4&quot;]) #L4
+ spider.lm$coefficients[1]+spider.lm$coefficients[4]</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDAuNjY0NDExOFxuIn0= -->
-<pre><code>[1] 0.6644118</code></pre>
-<!-- rnb-output-end -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucHJpbnQoXCJtZWFuIGZyaWN0aW9uIGNvZWZmaWNpZW50IGZvciBMMjpcIikgIFxuYGBgIn0= -->
-<pre class="r"><code>print(&quot;mean friction coefficient for L2:&quot;)  </code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiWzFdIFwibWVhbiBmcmljdGlvbiBjb2VmZmljaWVudCBmb3IgTDI6XCJcbiJ9 -->
-<pre><code>[1] &quot;mean friction coefficient for L2:&quot;</code></pre>
-<!-- rnb-output-end -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIG1lYW4oc3BpZGVyJGZyaWN0aW9uW3NwaWRlciRsZWc9PVwiTDJcIl0pICNMMlxuYGBgIn0= -->
-<pre class="r"><code> mean(spider$friction[spider$leg==&quot;L2&quot;]) #L2</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDAuODM2MzMzM1xuIn0= -->
-<pre><code>[1] 0.8363333</code></pre>
-<!-- rnb-output-end -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIHNwaWRlci5sbSRjb2VmZmljaWVudHNbMV0rc3BpZGVyLmxtJGNvZWZmaWNpZW50c1syXVxuYGBgIn0= -->
-<pre class="r"><code> spider.lm$coefficients[1]+spider.lm$coefficients[2]</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiKEludGVyY2VwdCkgXG4gIDAuODM2MzMzMyBcbiJ9 -->
-<pre><code>(Intercept) 
-  0.8363333 </code></pre>
-<!-- rnb-output-end -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucHJpbnQoXCJtZWFuIGZyaWN0aW9uIGNvZWZmaWNpZW50IGZvciBMMzpcIilcbmBgYCJ9 -->
-<pre class="r"><code>print(&quot;mean friction coefficient for L3:&quot;)</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiWzFdIFwibWVhbiBmcmljdGlvbiBjb2VmZmljaWVudCBmb3IgTDM6XCJcbiJ9 -->
-<pre><code>[1] &quot;mean friction coefficient for L3:&quot;</code></pre>
-<!-- rnb-output-end -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIG1lYW4oc3BpZGVyJGZyaWN0aW9uW3NwaWRlciRsZWc9PVwiTDNcIl0pICNMM1xuYGBgIn0= -->
-<pre class="r"><code> mean(spider$friction[spider$leg==&quot;L3&quot;]) #L3</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDAuODI0OTAzOFxuIn0= -->
-<pre><code>[1] 0.8249038</code></pre>
-<!-- rnb-output-end -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIHNwaWRlci5sbSRjb2VmZmljaWVudHNbMV0rc3BpZGVyLmxtJGNvZWZmaWNpZW50c1szXVxuYGBgIn0= -->
-<pre class="r"><code> spider.lm$coefficients[1]+spider.lm$coefficients[3]</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiKEludGVyY2VwdCkgXG4gIDAuODI0OTAzOCBcbiJ9 -->
-<pre><code>(Intercept) 
-  0.8249038 </code></pre>
-<!-- rnb-output-end -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucHJpbnQoXCJtZWFuIGZyaWN0aW9uIGNvZWZmaWNpZW50IGZvciBMNDpcIikgXG5gYGAifQ== -->
-<pre class="r"><code>print(&quot;mean friction coefficient for L4:&quot;) </code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiWzFdIFwibWVhbiBmcmljdGlvbiBjb2VmZmljaWVudCBmb3IgTDQ6XCJcbiJ9 -->
-<pre><code>[1] &quot;mean friction coefficient for L4:&quot;</code></pre>
-<!-- rnb-output-end -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIG1lYW4oc3BpZGVyJGZyaWN0aW9uW3NwaWRlciRsZWc9PVwiTDRcIl0pICNMNFxuYGBgIn0= -->
-<pre class="r"><code> mean(spider$friction[spider$leg==&quot;L4&quot;]) #L4</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDAuOTQ1NzVcbiJ9 -->
-<pre><code>[1] 0.94575</code></pre>
-<!-- rnb-output-end -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIHNwaWRlci5sbSRjb2VmZmljaWVudHNbMV0rc3BpZGVyLmxtJGNvZWZmaWNpZW50c1s0XVxuYGBgIn0= -->
-<pre class="r"><code> spider.lm$coefficients[1]+spider.lm$coefficients[4]</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiKEludGVyY2VwdCkgXG4gICAgMC45NDU3NSBcbiJ9 -->
-<pre><code>(Intercept) 
-    0.94575 </code></pre>
-<!-- rnb-output-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <p><strong>Q5.</strong> Given what you understand of the data, does the way we’ve been fitting the model seem to make intuitive sense, or should we be forcing the intercept to be zero? Explain.<br />
@@ -432,29 +462,6 @@ If forcing the intercept to be zero can give the mean instead of the effect size
 <pre class="r"><code>twowayFit &lt;- lm(friction ~ type + leg, data = spider)
 summary(twowayFit)</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiXG5DYWxsOlxubG0oZm9ybXVsYSA9IGZyaWN0aW9uIH4gdHlwZSArIGxlZywgZGF0YSA9IHNwaWRlcilcblxuUmVzaWR1YWxzOlxuICAgICBNaW4gICAgICAgMVEgICBNZWRpYW4gICAgICAgM1EgICAgICBNYXggXG4tMC40NjM5MiAtMC4xMzQ0MSAtMC4wMDUyNSAgMC4xMDU0NyAgMC42OTUwOSBcblxuQ29lZmZpY2llbnRzOlxuICAgICAgICAgICAgRXN0aW1hdGUgU3RkLiBFcnJvciB0IHZhbHVlIFByKD58dHwpICAgIFxuKEludGVyY2VwdCkgIDEuMDUzOTIgICAgMC4wMjgxNiAgMzcuNDI2ICA8IDJlLTE2ICoqKlxudHlwZXB1c2ggICAgLTAuNzc5MDEgICAgMC4wMjQ4MiAtMzEuMzgwICA8IDJlLTE2ICoqKlxubGVnTDIgICAgICAgIDAuMTcxOTIgICAgMC4wNDU2OSAgIDMuNzYzIDAuMDAwMjA1ICoqKlxubGVnTDMgICAgICAgIDAuMTYwNDkgICAgMC4wMzI1MSAgIDQuOTM3IDEuMzdlLTA2ICoqKlxubGVnTDQgICAgICAgIDAuMjgxMzQgICAgMC4wMzQzOCAgIDguMTgzIDEuMDFlLTE0ICoqKlxuLS0tXG5TaWduaWYuIGNvZGVzOiAgMCDigJgqKirigJkgMC4wMDEg4oCYKirigJkgMC4wMSDigJgq4oCZIDAuMDUg4oCYLuKAmSAwLjEg4oCYIOKAmSAxXG5cblJlc2lkdWFsIHN0YW5kYXJkIGVycm9yOiAwLjIwODQgb24gMjc3IGRlZ3JlZXMgb2YgZnJlZWRvbVxuTXVsdGlwbGUgUi1zcXVhcmVkOiAgMC43OTE2LFx0QWRqdXN0ZWQgUi1zcXVhcmVkOiAgMC43ODg2IFxuRi1zdGF0aXN0aWM6ICAgMjYzIG9uIDQgYW5kIDI3NyBERiwgIHAtdmFsdWU6IDwgMi4yZS0xNlxuIn0= -->
-<pre><code>
-Call:
-lm(formula = friction ~ type + leg, data = spider)
-
-Residuals:
-     Min       1Q   Median       3Q      Max 
--0.46392 -0.13441 -0.00525  0.10547  0.69509 
-
-Coefficients:
-            Estimate Std. Error t value Pr(&gt;|t|)    
-(Intercept)  1.05392    0.02816  37.426  &lt; 2e-16 ***
-typepush    -0.77901    0.02482 -31.380  &lt; 2e-16 ***
-legL2        0.17192    0.04569   3.763 0.000205 ***
-legL3        0.16049    0.03251   4.937 1.37e-06 ***
-legL4        0.28134    0.03438   8.183 1.01e-14 ***
----
-Signif. codes:  0 *** 0.001 ** 0.01 * 0.05 . 0.1   1
-
-Residual standard error: 0.2084 on 277 degrees of freedom
-Multiple R-squared:  0.7916,    Adjusted R-squared:  0.7886 
-F-statistic:   263 on 4 and 277 DF,  p-value: &lt; 2.2e-16</code></pre>
-<!-- rnb-output-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <hr />
@@ -466,20 +473,16 @@ F-statistic:   263 on 4 and 277 DF,  p-value: &lt; 2.2e-16</code></pre>
 <pre><code>The sample space contains the following 8 rows:  </code></pre>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbImRhdGEuZnJhbWUiXSwibmNvbCI6MiwibnJvdyI6OH0sInJkZiI6Ikg0c0lBQUFBQUFBQUJvVlN3VTdETUF4MWs0eXRsUVpJZk1jcXJlTzZHMGNPaUFQYU5YU0ZWV1RKbEtiQWtTL2ZTTEs0dEJtRFNxbWZuZmpGei9IajNhcklWaGtBRUtBc0FVSXRaTVQrRW1DUU92c0pRRy84QWFCVGF5ZCswL3ZuN0lEZ1FsVHZsV2dzdXZhN3h5aDdhSVg0d2MwbXlocVZnamVZMUZHOThOSW9iZEUrS2dZTGNJdUd4WTdMMFpKRFlHS0JpZHpQTzFSMGFOR2gyMk1lUGZ4VndiQmd5YmZWaWNvbnJ1YzlYRVJKcVdwTnpvM1JOcEdFSnNPMHA0WDE0bjNpMUJFdmV6M0VnR3ZrUU9uWVhidnM1QWEzR0xxTG9SdlVzOFAvY3JBUEoyZnB1dDRHT0xFUXV4TzNMZFhxSThkTnIvd0wvRGM1OHdMWm1odWV2MmliOGd2ZFdPMU1yU1MyY3hRbEp6b0tYTFhTWGI2ZWxadFd2czJjb0N5TUU0U0NrakJtaUVra2VJU2pVY25YV2xZNERvSS9WL2c0bDFhazE1anZkQzBOS3JIUkpqZktjRHlYbFVwZ3hHdUQvVGM4YlpWYm9RTUFBQT09In0= -->
-<div data-pagedtable="false">
-<script data-pagedtable-source type="application/json">
-{"columns":[{"label":["Var1"],"name":[1],"type":["fctr"],"align":["left"]},{"label":["Var2"],"name":[2],"type":["fctr"],"align":["left"]}],"data":[{"1":"Pull","2":"L1"},{"1":"Push","2":"L1"},{"1":"Pull","2":"L2"},{"1":"Push","2":"L2"},{"1":"Pull","2":"L3"},{"1":"Push","2":"L3"},{"1":"Pull","2":"L4"},{"1":"Push","2":"L4"}],"options":{"columns":{"min":{},"max":[10],"total":[2]},"rows":{"min":[10],"max":[10],"total":[8]},"pages":{}}}
-  </script>
-</div>
-<!-- rnb-frame-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZXhwYW5kLmdyaWQoYyhcInB1bGxcIixcInB1c2hcIiksYyhcIkwxXCIsXCJMMlwiLFwiTDNcIixcIkw0XCIpKVxuYGBgIn0= -->
+<pre class="r"><code>expand.grid(c(&quot;pull&quot;,&quot;push&quot;),c(&quot;L1&quot;,&quot;L2&quot;,&quot;L3&quot;,&quot;L4&quot;))</code></pre>
+<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <p><strong>Q7.</strong> Use that sample space to interpret each of the <span class="math inline">\(\hat{\beta_i}\)</span>. That is, write down the experimental condition for the intercept, for typepush, legL2, etc.</p>
-<p>The experimental condition…</p>
+<p>The experimental condition… As in <span class="math inline">\(\hat{\beta_0}\)</span> is the</p>
 <!-- rnb-text-end -->
 
-<div id="rmd-source-code">LS0tDQp0aXRsZTogIkxhYiA4IC0gZGVzaWduIG1hdHJpeCINCm91dHB1dDoNCiAgcGRmX2RvY3VtZW50Og0KICAgIGZpZ19jYXB0aW9uOiB5ZXMNCiAgICBmaWdfaGVpZ2h0OiA0DQogICAgZmlnX3dpZHRoOiA2DQogIGh0bWxfbm90ZWJvb2s6IGRlZmF1bHQNCiAgaHRtbF9kb2N1bWVudDogZGVmYXVsdA0KLS0tDQoNClRoaXMgbGFiIG9mZmVycyBwcmFjdGljZSB3aXRoIGRlc2lnbiBtYXRyaWNlcyBhbmQgYW4gaW50cm9kdWN0aW9uIHRvIHN1bW1hcmllcyBvZiB0aGUgbG0oKSBmdW5jdGlvbi4gTGV0J3Mgd29yayB3aXRoIHRoZSBzcGlkZXIgZGF0YSwgZGVzY3JpYmVkIGluIDUuOA0KDQpgYGB7cn0NCnNwaWRlciA8LSByZWFkLmNzdigiUDovTXkgRG9jdW1lbnRzL0JEQV9TcHJpbmcyMDE4L3NwaWRlcl93b2xmZl9nb3JiXzIwMTMuY3N2IikNCmBgYA0KDQoqKioNCg0KKipRMS4qKiBDcmVhdGUgdGhlIGRlc2lnbiBtYXRyaXggZm9yIG1vZGVsaW5nIHRoZSBlZmZlY3Qgb2YgZGlmZmVyZW50IGxlZyBzZXRzIG9uIHRoZSBvYnNlcnZlZCBmcmljdGlvbiBjb2VmZmljaWVudC4gUHJvdmlkZSBvbmx5IHRoZSBSIGNvZGUgZm9yIGRvaW5nIHRoaXMgKGl0J3MgYSBsb25nIG1hdHJpeCksIGFuZCB3cml0ZSBhIGZldyBzZW50ZW5jZXMgdG8gZGVzY3JpYmUgdGhlIGNvbXBvbmVudHMgb2YgdGhlIG1hdHJpeCAoaS5lLiBzYXkgd2hhdCBjb21wcmlzZSB0aGUgcm93cywgY29sdW1ucywgYW5kIHZhbHVlcyBpbiBlYWNoIGNlbGwpLg0KYGBge3J9DQpzcGlkZXIuZG0gPC0gbW9kZWwubWF0cml4KHNwaWRlciRmcmljdGlvbn5mYWN0b3Ioc3BpZGVyJGxlZykrMCkgI2FzIGEgYm9vbGVhbiANCnNwaWRlci5kbVtjKDY3OjcwLDk5OjEwMCwyNDA6MjQxKSxdICNzdWJzZXQgb2YgdGhlIGRlc2lnbiBtYXRyaXgNCmBgYA0KICAgIFRoaXMgZGVzaWduIG1hdHJpeCBhY3RzIGFzIGEgYm9vbGVhbiBtYXRyaXggc2V0dGluZyB0aGUgdmFsdWUgaW4gYSBjZWxsIHRvIDEgd2hlbiB0aGF0IGluZGl2aWR1YWwgKHJvdykgaGFzIHRoZSBmcmljdGlvbiB2YWx1ZSBmb3IgdGhlIGNvcnJlc3BvbmRpbmcgbGVnIHBhaXIgaW4gdGhlIGFwcHJvcHJpYXRlIGNvbHVtbi4gQ29sdW1uIDEgKCJMMSIpIGhhcyBhIDEgaW4gcm93cyB3aXRoIGEgY29vcmVzcG9uZGluZyAiTDEiIGluIHRoZSByb3cgb2YgdGhlIHNwaWRlciBkYXRhIGZyYW1lIGxlZyBjb2x1bW4gYW5kIGEgMCBpbiBhbGwgb3RoZXIgcm93cy4gTGlrZXdpc2UsIGNvbHVtbiAyIG9mIHRoZSBkZXNpZ24gbWF0cml4IG9ubHkgaGFzIDFzIGluIHJvd3MgZm9yIHdoaWNoIHRoZSBzcGlkZXIgZGF0YSBmcmFtZSBsZWcgY29sdW1uIGlzICJMMiIuIFRoaXMgcGF0dGVybiBpcyBjb250aW51ZWQgZm9yICJMMyIgYW5kICJMNCIuICANCiAgICANCg0KDQoNCioqUTIuKiogSG93IG1hbnkgcGFyYW1ldGVycyBpbiB0aGlzIGRlc2lnbj8gRXhwbGFpbiB3aGF0IHRoZXkgYXJlIGFuZCB3aGF0IGluZm9ybWF0aW9uIHRoZXkgcHJvdmlkZSwgcmVmZXJlbmNpbmcgdGhlIGRlc2lnbiBtYXRyaXggeW91IHByb2R1Y2VkIGluIFExLiBUaGVuIHByb3ZpZGUgdGhlIHBhcmFtZXRlciBtYXRyaXguDQogICANClRoZXJlIGFyZSBmb3VyIHBhcmFtZXRlcnMgaW4gdGhpcyBkZXNpZ24uIFRoZSBpbnRlcmNlcHQsICRcYmV0YSR+MH4sIHdoaWNoIGlzIHRoZSBtZWFuIG9mIGZyaWN0aW9uIGZyb20gTDEgbGVnIHBhaXIuICRcYmV0YSR+MX4gaXMgdGhlIG9mZnNldCBmcm9tIHRoZSBpbnRlcmNlcHQgdG8gdGhlIG1lYW4gb2YgTDIuIGxlZ0wzLCAkXGJldGEkfjJ+LCBpcyB0aGUgZWZmZWN0IHNpemUgb2YgTDMgZnJvbSBMMSAoJFxiZXRhJH4wfiArICRcYmV0YSR+Mn4gPSBtZWFuIGZyaWN0aW9uIG9mIEwzKS4gVGhlIGZpbmFsIHBhcmFtZXRlciBpcyAkXGJldGEkfjN+IHdoaWNoIGlzIHRoZSBlZmZlY3Qgc2l6ZSBvZiBMNCAodGhlIG9mZnNldCBmcm9tIEwxIHRvIEw0KS4gICANCiQkDQp7XGxlZnQoXGJlZ2lue2FycmF5fXtjY30NCiAgXGJldGFfezB9XFwNCiAgXGJldGFfezF9XFwNCiAgXGJldGFfezJ9XFwNCiAgXGJldGFfezN9DQogIFxlbmR7YXJyYXl9XHJpZ2h0KQ0KfQ0KJCQNCg0KKioqDQoNCmxtKCkgaGFuZGxlcyBhbGwgdGhhdCBsaW5lYXIgYWxnZWJyYSB3ZSBkaWQgaW4gbGFiIGxhc3Qgd2VlayBhbmQgaW4gY2xhc3MgdGhpcyB3ZWVrLiBJdCBvdXRwdXRzIGEgbG90IG9mIGluZm9ybWF0aW9uLiBMZXQncyB0YWtlIGEgbG9vayBhdCBhIG1vZGVsIGZvciB0aGUgZWZmZWN0IG9mIHB1c2hpbmcgdnMuIHB1bGxpbmcgKG1vdmVtZW50IHR5cGUpIG9uIHRoZSBmcmljdGlvbiBjb2VmZmljaWVudC4NCg0KYGBge3J9DQptb2RlbGZpdCA8LSBsbShmcmljdGlvbn50eXBlLCBkYXRhPXNwaWRlcikNCnN0cihtb2RlbGZpdCkNCmBgYA0KDQpMb3RzIG9mIHJlc3VsdHMuIFRoZSBmaXJzdCBmZXcgYXJlIHRoZSBtb3N0IGNvbW1vbmx5IHVzZWQuIENvZWZmaWNpZW50cyBhcmUgdGhlICRcaGF0e1xiZXRhfSQgb2YgY291cnNlLiBSZXNpZHVhbHMgYXJlIHRoZSAkXGVwc2lsb24kLiBUaGUgZGF0YSwgb2YgY291cnNlLCBwcm92aWRlIHRoZSBYIGFuZCBZLiBTbyB3aHkgYWxsIHRoYXQgb3RoZXIgc3R1ZmY/IE11Y2ggb2YgaXQgaXMgYmV5b25kIHRoZSBzY29wZSBvZiB0aGlzIGNvdXJzZTsgd2UnbGwganVzdCBsb29rIGF0IHN1bW1hcmllcyB1c2luZyB0aGUgc3VtbWFyeS5sbSgpIGZ1bmN0aW9uLiBOb3RlOiBjYW4gYWxzbyBqdXN0IHVzZSBzdW1tYXJ5KCkgYW5kIFIgd2lsbCByZWNvZ25pemUgdGhhdCBpdCdzIGFuIGxtIG9iamVjdC4uLg0KDQpgYGB7cn0NCnN1bW1hcnkobW9kZWxmaXQpDQpgYGANCg0KTmljZSBhbmQgdGlkeS4gRmlyc3QsIFIgcmVtaW5kcyB1cyB3aGljaCBtb2RlbCB3ZSBmaXQuIE5leHQgaXQgcHJvdmlkZXMgdGhlIDUtcG9pbnQgc3VtbWFyeSBmb3IgdGhlIGRpc3RyaWJ1dGlvbiBvZiB0aGUgJFxlcHNpbG9uX2kkLiBOZXh0LCBpdCBnaXZlcyB0aGUgJFxoYXR7XGJldGFfaX0kLCBhc3NvY2lhdGVkIHVuY2VydGFpbnRpZXMsIGFuZCB0aGUgcmVzdWx0cyBmb3IgYSB0LXRlc3Qgb2YgdGhlIG51bGwgaHlwb3RoZXNpcyB0aGF0IHRoZSBnaXZlbiBjb2VmZmljaWVudCB2YWx1ZSBpcyBlcXVhbCB0byB6ZXJvLiBJdCBuZXh0IHByb3ZpZGVzIHRoZSBzdGFuZGFyZCBlcnJvciBvZiB0aGUgZGlzdHJpYnV0aW9uIG9mICRcZXBzaWxvbl9pJCAoYW5kIHRoZSBkZW5vbWluYXRvciB2YWx1ZSBzbyB0aGF0IGEgcGVyc29uIGNvdWxkIGNvbXB1dGUgdGhlIHN0YW5kYXJkIGRldmlhdGlvbiBpbnN0ZWFkKS4gTmV4dCBpcyB0aGUgJFJeMiQgYW5kIGFkanVzdGVkICRSXjIkLiBXZSBjYW4gcGVlayBhdCB0aGUgc3VtbWFyeS5sbSBmdW5jdGlvbiB0byBmaWd1cmUgb3V0IGhvdyAkUl4yJCBhbmQgYWRqdXN0ZWQgJFJeMiQgYXJlIGNvbXB1dGVkOg0KDQoxKSAkUl4yID0gXGZyYWN7TVNTfXsoTVNTICsgUlNTKX0kDQoyKSAkYWRqLlJeMiA9IDEgLSAoMSAtIHIuc3F1YXJlZCkgKiBcZnJhY3sobiAtIGRmLmludCl9e3JkZn0kDQoNCk1TUyBpcyB0aGUgbWVhbiBzdW0gb2Ygc3F1YXJlcy4gUlNTIGlzIHRoZSByZXNpZHVhbCBzdW0gb2Ygc3F1YXJlcy4gZGYuaW50IGlzIDEgaWYgYW4gaW50ZXJjZXB0IHRlcm0gaXMgZXN0aW1hdGVkLCAwIGlmIG5vdC4gcmRmIGlzIHRoZSByZXNpZHVhbCBkZWdyZWVzIG9mIGZyZWVkb20gKE4tcCkuDQoNCkkgaW5sY3VkZSB0aGlzIG9ubHkgYmVjYXVzZSBzdHVkZW50cyBhbHdheXMgYXNrIGFib3V0IHRoZSBhZGp1c3RlZCAkUl4yJC4gTW9yZSBnZW5lcmFsbHksICRSXjIkIGlzIGEgc2xpcHBlcmx5IHN0YXRpc3RpYywgYW5kIGl0J3Mgb2Z0ZW4gdGltZXMgbXVjaCBsZXNzIHVzZWZ1bCB0aGF0IGl0J3MgdG91dGVkIGFzIGJlaW5nLiBXZSdsbCBkaXNjdXNzIHRoZSBjb21wdXRhdGlvbnMgYW5kIGludGVycHJldGF0aW9ucyBpbiBjbGFzcy4gU29tZSB3aWxsIGJlbmVmaXQgZnJvbSB0aGlzLCBvdGhlcnMgbm90IHNvIG11Y2guIEFuZCB0aGF0J3MgT0suDQoNCkZpbmFsbHksIHRoZSBGIHN0YXRpc3RpYyBpcyB0aGUgdGVzdCBzdGF0aXN0aWMgZm9yIGFsbCBsaW5lYXIgbW9kZWxzLiBJdCBpcyB1c2VkIHRvIHRlc3QgdGhlIG51bGwgaHlwb3RoZXNpcyB0aGF0IHRoZSBkYXRhIHdlcmUgZ2VuZXJhdGVkIGJ5IGEgcmFuZG9tIHByb2Nlc3MgY2VudGVyZWQgb24gYSBzaW5nbGUgdmFsdWUgZm9yIHRoZSBtZWFuLCBhbmQgdmFyaWFuY2UgJFxzaWdtYV4yJC4gV2UnbGwgY292ZXIgdGhhdCBpbiBtb3JlIGRldGFpbCBsYXRlci4NCg0KKioqDQoNCioqUTMuKiogR2l2ZW4gdGhlIG91dHB1dCBmb3IgdGhlIGxpbmVhciBtb2RlbCBwcmVzZW50ZWQgYWJvdmUgLSBmb3IgdGhlIGVmZmVjdCBvZiBtb3ZlbWVudCB0eXBlIChwdXNoIHYuIHB1bGwpIG9uIHRoZSBmcmljdGlvbiBjb2VmZmljaWVudCAtIHdoYXQgaXMgdGhlIG1lYW4gdmFsdWUgb2YgdGhlIGZyaWN0aW9uIGNvZWZmaWNpZW50IGZvciB0aGUgc3BpZGVyIGxlZ3MgdGhhdCB3ZXJlIHB1c2hpbmc/ICAgDQpgYGB7cn0NCm1lYW4oc3BpZGVyJGZyaWN0aW9uW3NwaWRlciR0eXBlPT0icHVzaCJdKQ0KMS4yMTEyMSsoLTAuNzc5MDEpDQpgYGANCiAgIFRoZSBsZWdzIHRoYXQgd2VyZSBwdXNoaW5nIGhhcyBhIG1lYW4gdmFsdWUgb2YgMC40My4gVGhpcyBpcyB0aGUgaW50ZXJjZXB0IHBsdXMgdGhlIGVmZmVjdCBzaXplIG9mIHRoZSB0eXBlIHB1c2ggZXN0aW1hdGUuIA0KDQoqKlE0LioqIEZpdCB0aGUgbGluZWFyIG1vZGVsIGZvciB0aGUgZGVzaWduIHlvdSBwcm92aWRlZCBpbiBRMSBhbmQgd3JpdGUgZG93biB0aGUgdmFsdWUgZm9yIHRoZSBtZWFuIGZyaWN0aW9uIGNvZWZmaWNpZW50IGZvciBlYWNoIG9mIHRoZSA0IGxlZyBzZXRzLiAgIA0KYGBge3J9DQpsbShmcmljdGlvbn5sZWcsZGF0YT1zcGlkZXIpDQoNCnNwaWRlci5sbSA8LSBsbShmcmljdGlvbn5sZWcsZGF0YT1zcGlkZXIpDQpwcmludCgiTWVhbiBmcmljdGlvbiBjb2VmZmljaWVudCBmb3IgTDE6IikNCiBtZWFuKHNwaWRlciRmcmljdGlvbltzcGlkZXIkbGVnPT0iTDEiXSkgI0wxDQoNCnByaW50KCJNZWFuIGZyaWN0aW9uIGNvZWZmaWNpZW50IGZvciBMMjoiKSAgDQogbWVhbihzcGlkZXIkZnJpY3Rpb25bc3BpZGVyJGxlZz09IkwyIl0pICNMMg0KIHNwaWRlci5sbSRjb2VmZmljaWVudHNbMV0rc3BpZGVyLmxtJGNvZWZmaWNpZW50c1syXQ0KDQpwcmludCgiTWVhbiBmcmljdGlvbiBjb2VmZmljaWVudCBmb3IgTDM6IikNCiBtZWFuKHNwaWRlciRmcmljdGlvbltzcGlkZXIkbGVnPT0iTDMiXSkgI0wzDQogc3BpZGVyLmxtJGNvZWZmaWNpZW50c1sxXStzcGlkZXIubG0kY29lZmZpY2llbnRzWzNdDQoNCnByaW50KCJNZWFuIGZyaWN0aW9uIGNvZWZmaWNpZW50IGZvciBMNDoiKSANCiBtZWFuKHNwaWRlciRmcmljdGlvbltzcGlkZXIkbGVnPT0iTDQiXSkgI0w0DQogc3BpZGVyLmxtJGNvZWZmaWNpZW50c1sxXStzcGlkZXIubG0kY29lZmZpY2llbnRzWzRdDQoNCmBgYA0KDQoqKlE1LioqIEdpdmVuIHdoYXQgeW91IHVuZGVyc3RhbmQgb2YgdGhlIGRhdGEsIGRvZXMgdGhlIHdheSB3ZSd2ZSBiZWVuIGZpdHRpbmcgdGhlIG1vZGVsIHNlZW0gdG8gbWFrZSBpbnR1aXRpdmUgc2Vuc2UsIG9yIHNob3VsZCB3ZSBiZSBmb3JjaW5nIHRoZSBpbnRlcmNlcHQgdG8gYmUgemVybz8gRXhwbGFpbi4gIA0KICBJZiBmb3JjaW5nIHRoZSBpbnRlcmNlcHQgdG8gYmUgemVybyBjYW4gZ2l2ZSB0aGUgbWVhbiBpbnN0ZWFkIG9mIHRoZSBlZmZlY3Qgc2l6ZSBvZiBlYWNoIGluIGNvbXBhcmlzb24gdG8gdGhlIGZpcnN0IHBhcmFtZXRlciwgdGhlbiBmb3JjaW5nIHRoZSBpbnRlcmNlcHQgbWFrZXMgc2Vuc2UuIEhvd2V2ZXIsIGluIHNvbWUgY2FzZXMgd2UgYXJlIGludGVyZXN0ZWQgaW4gdGhlIGVmZmVjdCBzaXplIG9yIGRpZmZlcmVuY2UgZnJvbSBhIGJhc2VsaW5lIHZhbHVlIGZvciB0cmVhdG1lbnRzLiANCg0KDQoqKioNCg0KRmluYWxseSwgbGV0J3MgY29uc2lkZXIgYSBtdWx0aS12YXJpYXRlIG1vZGVsICh0d28td2F5IEFOT1ZBKSBmb3IgdGhlIGFkZGl0aXZlIGVmZmVjdHMgb2YgbGVnIHNldCBhbmQgbW92ZW1lbnQgdHlwZSBvbiB0aGUgZnJpY3Rpb24gY29lZmZpY2llbnQuIFdlJ2xsIGZpdCB0aGUgc2ltcGxlIG1haW4gZWZmZWN0cyBtb2RlbCB3aXRob3V0IGFuZCBpbnRlcmFjdGlvbi4NCg0KDQpgYGB7cn0NCnR3b3dheUZpdCA8LSBsbShmcmljdGlvbiB+IHR5cGUgKyBsZWcsIGRhdGEgPSBzcGlkZXIpDQpzdW1tYXJ5KHR3b3dheUZpdCkNCmBgYA0KDQoqKioNCmBgYHtyLGVjaG89RkFMU0V9DQp0YWlsKG1vZGVsLm1hdHJpeChzcGlkZXIkZnJpY3Rpb25+c3BpZGVyJGxlZytzcGlkZXIkdHlwZSswKSw1MCkNCmBgYA0KDQoqKlE2LioqIFdyaXRlIHRoZSBzYW1wbGUgc3BhY2UgZm9yIHRoaXMgZXhwZXJpbWVudGFsIGRlc2lnbi4gSGludDogdGhpcyB3aWxsIGJlIHRoZSBzZXQgb2YgYWxsIHBvc3NpYmxlICJzdGF0ZXMiIGZvciBsZWcgc2V0IGFuZCBtb3ZlbWVudCB0eXBlIHRoYXQgY2FuIGJlIG9ic2VydmVkIGluIHRoZSBleHBlcmltZW50LiBJdCBtYXkgaGVscCB0byBsb29rIGF0IHRoZSBhY3R1YWwgZGVzaWduIG1hdHJpeCB5b3UgZGV2ZWxvcGVkIGluIFExLiAgIA0KICAgIA0KICAgIFRoZSBzYW1wbGUgc3BhY2UgY29udGFpbnMgdGhlIGZvbGxvd2luZyA4IHJvd3M6ICANCmBgYHtyfQ0KZXhwYW5kLmdyaWQoYygiUHVsbCIsIlB1c2giKSxjKCJMMSIsIkwyIiwiTDMiLCJMNCIpKQ0KYGBgIA0KDQoNCioqUTcuKiogVXNlIHRoYXQgc2FtcGxlIHNwYWNlIHRvIGludGVycHJldCBlYWNoIG9mIHRoZSAkXGhhdHtcYmV0YV9pfSQuIFRoYXQgaXMsIHdyaXRlIGRvd24gdGhlIGV4cGVyaW1lbnRhbCBjb25kaXRpb24gZm9yIHRoZSBpbnRlcmNlcHQsIGZvciB0eXBlcHVzaCwgbGVnTDIsIGV0Yy4gICANCg0KICAgVGhlIGV4cGVyaW1lbnRhbCBjb25kaXRpb24uLi4g</div>
+<div id="rmd-source-code">LS0tDQp0aXRsZTogIkxhYiA4IC0gZGVzaWduIG1hdHJpeCINCm91dHB1dDoNCiAgcGRmX2RvY3VtZW50Og0KICAgIGZpZ19jYXB0aW9uOiB5ZXMNCiAgICBmaWdfaGVpZ2h0OiA0DQogICAgZmlnX3dpZHRoOiA2DQogIGh0bWxfbm90ZWJvb2s6IGRlZmF1bHQNCiAgaHRtbF9kb2N1bWVudDogZGVmYXVsdA0KLS0tDQoNClRoaXMgbGFiIG9mZmVycyBwcmFjdGljZSB3aXRoIGRlc2lnbiBtYXRyaWNlcyBhbmQgYW4gaW50cm9kdWN0aW9uIHRvIHN1bW1hcmllcyBvZiB0aGUgbG0oKSBmdW5jdGlvbi4gTGV0J3Mgd29yayB3aXRoIHRoZSBzcGlkZXIgZGF0YSwgZGVzY3JpYmVkIGluIDUuOA0KDQpgYGB7cn0NCnNwaWRlciA8LSByZWFkLmNzdigiUDovTXkgRG9jdW1lbnRzL0JEQV9TcHJpbmcyMDE4L3NwaWRlcl93b2xmZl9nb3JiXzIwMTMuY3N2IikNCmBgYA0KDQoqKioNCg0KKipRMS4qKiBDcmVhdGUgdGhlIGRlc2lnbiBtYXRyaXggZm9yIG1vZGVsaW5nIHRoZSBlZmZlY3Qgb2YgZGlmZmVyZW50IGxlZyBzZXRzIG9uIHRoZSBvYnNlcnZlZCBmcmljdGlvbiBjb2VmZmljaWVudC4gUHJvdmlkZSBvbmx5IHRoZSBSIGNvZGUgZm9yIGRvaW5nIHRoaXMgKGl0J3MgYSBsb25nIG1hdHJpeCksIGFuZCB3cml0ZSBhIGZldyBzZW50ZW5jZXMgdG8gZGVzY3JpYmUgdGhlIGNvbXBvbmVudHMgb2YgdGhlIG1hdHJpeCAoaS5lLiBzYXkgd2hhdCBjb21wcmlzZSB0aGUgcm93cywgY29sdW1ucywgYW5kIHZhbHVlcyBpbiBlYWNoIGNlbGwpLg0KYGBge3J9DQpzcGlkZXIuZG0gPC0gbW9kZWwubWF0cml4KH5mYWN0b3Ioc3BpZGVyJGxlZykgLTEpICNhcyBhIGJvb2xlYW4gDQpzcGlkZXIuZG1bYyg2Nzo3MCw5OToxMDAsMjQwOjI0MSksXSAjc3Vic2V0IG9mIHRoZSBkZXNpZ24gbWF0cml4DQpgYGANCiAgICBUaGlzIGRlc2lnbiBtYXRyaXggYWN0cyBhcyBhIGJvb2xlYW4gbWF0cml4IHNldHRpbmcgdGhlIHZhbHVlIGluIGEgY2VsbCB0byAxIHdoZW4gdGhhdCBpbmRpdmlkdWFsIChyb3cpIGhhcyB0aGUgZnJpY3Rpb24gdmFsdWUgZm9yIHRoZSBjb3JyZXNwb25kaW5nIGxlZyBwYWlyIGluIHRoZSBhcHByb3ByaWF0ZSBjb2x1bW4uIENvbHVtbiAxICgiTDEiKSBoYXMgYSAxIGluIHJvd3Mgd2l0aCBhIGNvb3Jlc3BvbmRpbmcgIkwxIiBpbiB0aGUgcm93IG9mIHRoZSBzcGlkZXIgZGF0YSBmcmFtZSBsZWcgY29sdW1uIGFuZCBhIDAgaW4gYWxsIG90aGVyIHJvd3MuIExpa2V3aXNlLCBjb2x1bW4gMiBvZiB0aGUgZGVzaWduIG1hdHJpeCBvbmx5IGhhcyAxcyBpbiByb3dzIGZvciB3aGljaCB0aGUgc3BpZGVyIGRhdGEgZnJhbWUgbGVnIGNvbHVtbiBpcyAiTDIiLiBUaGlzIHBhdHRlcm4gaXMgY29udGludWVkIGZvciAiTDMiIGFuZCAiTDQiLiAgDQogICANCiAgIElmIHlvdSBhcmUgYXNraW5nIGZvciB0aGUgZWZmZWN0IG9mIGRpZmZlcmVudCBsZWcgc2V0cyBhbmQgd2hldGhlciB0aGUgbGVncyBhcmUgcHVzaGluZyBvciBwdWxsaW5nLCB0aGVuIHRoZSBkZXNpZ24gbWF0cml4IGJlY29tZXM6ICAgIA0KYGBge3J9DQpzcGlkZXIuZnVsbC5kbSA8LSBtb2RlbC5tYXRyaXgoZnJpY3Rpb24gfiBmYWN0b3IobGVnKSArIGZhY3Rvcih0eXBlKSwgZGF0YT1zcGlkZXIpDQpzcGlkZXIuZnVsbC5kbVtjKDE6Miw2Nzo3MCw4MDo4NSw5OToxMDAsMjQwOjI0MSxucm93KHNwaWRlcikpLF0gI3N1YnNldCBvZiB0aGUgZGVzaWduIG1hdHJpeA0KYGBgDQogICANCg0KKipRMi4qKiBIb3cgbWFueSBwYXJhbWV0ZXJzIGluIHRoaXMgZGVzaWduPyBFeHBsYWluIHdoYXQgdGhleSBhcmUgYW5kIHdoYXQgaW5mb3JtYXRpb24gdGhleSBwcm92aWRlLCByZWZlcmVuY2luZyB0aGUgZGVzaWduIG1hdHJpeCB5b3UgcHJvZHVjZWQgaW4gUTEuIFRoZW4gcHJvdmlkZSB0aGUgcGFyYW1ldGVyIG1hdHJpeC4NCiAgIA0KVGhlcmUgYXJlIGZvdXIgcGFyYW1ldGVycyBpbiB0aGUgbGVnIGRlc2lnbi4gVGhlIGludGVyY2VwdCwgJFxiZXRhXzEkLCB3aGljaCBpcyB0aGUgbWVhbiBvZiBmcmljdGlvbiBmcm9tIEwxIGxlZyBwYWlyLiAkXGJldGFfMiQgaXMgdGhlIG9mZnNldCBmcm9tIHRoZSBpbnRlcmNlcHQgdG8gdGhlIG1lYW4gb2YgTDIuIGxlZ0wzLCAkXGJldGFfMyQsIGlzIHRoZSBlZmZlY3Qgc2l6ZSBvZiBMMyBmcm9tIEwxICgkXGJldGFfMSQgKyAkXGJldGFfMyQgPSBtZWFuIGZyaWN0aW9uIG9mIEwzKS4gVGhlIGZpbmFsIHBhcmFtZXRlciBpcyAkXGJldGFfNCQgd2hpY2ggaXMgdGhlIGVmZmVjdCBzaXplIG9mIEw0ICh0aGUgb2Zmc2V0IGZyb20gTDEgdG8gTDQpLiAgIA0KJCQNCntcbGVmdChcYmVnaW57YXJyYXl9e2NjfQ0KICBcYmV0YV97MX1cXA0KICBcYmV0YV97Mn1cXA0KICBcYmV0YV97M31cXA0KICBcYmV0YV97NH0NCiAgXGVuZHthcnJheX1ccmlnaHQpDQp9DQokJA0KDQogICBUaGlzIGZ1bGwgZGVzaWduIG1hdHJpeCBpcyBub3QgYm9vbGVhbiAobWlzc2luZyB0aGUgIiswIikuIEluIHRoaXMgY2FzZSB0aGUgSW50ZXJjZXB0LCAkXGJldGFfMCQsIGlzIHRoZSBtZWFuIGZyaWN0aW9uIG9mIEwxIHdoZW4gcHVsbGluZy4gVGhlIGxhc3QgY29sdW1uLCAkXGJldGFfNCQsIGlzIHRoZSBlZmZlY3Qgc2l6ZSBvZiBwdXNoaW5nIHNvIG1lYW4gcHVzaGluZyBmcmljdGlvbiBvZiBMMSBpcyAkXGJldGFfMCQgKyAkXGJldGFfNCQuIFRoZSBwYXJhbWV0ZXJzICRcYmV0YV9qJCAoaiA9IDEtMykgYXJlIHRoZSBvZmZzZXQgb2YgcHVsbGluZyBmcmljdGlvbiBmb3IgZWFjaCBsZWcgKEwyIHRvIEw0KS4gQWRkaXRpb25hbGx5IGFkZGluZyAkXGJldGFfNCQgdG8gYW55IG9mIHRoZXNlIHdpbGwgZ2l2ZSB0aGUgZWZmZWN0IHNpemUgb2YgcHVzaGluZyB0byBlYWNoIGxlZyBwYWlyLiAgICAgDQokJA0Ke1xsZWZ0KFxiZWdpbnthcnJheX17Y2N9DQogIFxiZXRhX3swfVxcDQogIFxiZXRhX3sxfVxcDQogIFxiZXRhX3syfVxcDQogIFxiZXRhX3szfVxcDQogIFxiZXRhX3s0fQ0KICBcZW5ke2FycmF5fVxyaWdodCkNCn0NCiQkDQoNCioqKg0KDQpsbSgpIGhhbmRsZXMgYWxsIHRoYXQgbGluZWFyIGFsZ2VicmEgd2UgZGlkIGluIGxhYiBsYXN0IHdlZWsgYW5kIGluIGNsYXNzIHRoaXMgd2Vlay4gSXQgb3V0cHV0cyBhIGxvdCBvZiBpbmZvcm1hdGlvbi4gTGV0J3MgdGFrZSBhIGxvb2sgYXQgYSBtb2RlbCBmb3IgdGhlIGVmZmVjdCBvZiBwdXNoaW5nIHZzLiBwdWxsaW5nIChtb3ZlbWVudCB0eXBlKSBvbiB0aGUgZnJpY3Rpb24gY29lZmZpY2llbnQuDQoNCmBgYHtyfQ0KbW9kZWxmaXQgPC0gbG0oZnJpY3Rpb25+dHlwZSwgZGF0YT1zcGlkZXIpDQpzdHIobW9kZWxmaXQpDQpgYGANCg0KTG90cyBvZiByZXN1bHRzLiBUaGUgZmlyc3QgZmV3IGFyZSB0aGUgbW9zdCBjb21tb25seSB1c2VkLiBDb2VmZmljaWVudHMgYXJlIHRoZSAkXGhhdHtcYmV0YX0kIG9mIGNvdXJzZS4gUmVzaWR1YWxzIGFyZSB0aGUgJFxlcHNpbG9uJC4gVGhlIGRhdGEsIG9mIGNvdXJzZSwgcHJvdmlkZSB0aGUgWCBhbmQgWS4gU28gd2h5IGFsbCB0aGF0IG90aGVyIHN0dWZmPyBNdWNoIG9mIGl0IGlzIGJleW9uZCB0aGUgc2NvcGUgb2YgdGhpcyBjb3Vyc2U7IHdlJ2xsIGp1c3QgbG9vayBhdCBzdW1tYXJpZXMgdXNpbmcgdGhlIHN1bW1hcnkubG0oKSBmdW5jdGlvbi4gTm90ZTogY2FuIGFsc28ganVzdCB1c2Ugc3VtbWFyeSgpIGFuZCBSIHdpbGwgcmVjb2duaXplIHRoYXQgaXQncyBhbiBsbSBvYmplY3QuLi4NCg0KYGBge3J9DQpzdW1tYXJ5KG1vZGVsZml0KQ0KYGBgDQoNCk5pY2UgYW5kIHRpZHkuIEZpcnN0LCBSIHJlbWluZHMgdXMgd2hpY2ggbW9kZWwgd2UgZml0LiBOZXh0IGl0IHByb3ZpZGVzIHRoZSA1LXBvaW50IHN1bW1hcnkgZm9yIHRoZSBkaXN0cmlidXRpb24gb2YgdGhlICRcZXBzaWxvbl9pJC4gTmV4dCwgaXQgZ2l2ZXMgdGhlICRcaGF0e1xiZXRhX2l9JCwgYXNzb2NpYXRlZCB1bmNlcnRhaW50aWVzLCBhbmQgdGhlIHJlc3VsdHMgZm9yIGEgdC10ZXN0IG9mIHRoZSBudWxsIGh5cG90aGVzaXMgdGhhdCB0aGUgZ2l2ZW4gY29lZmZpY2llbnQgdmFsdWUgaXMgZXF1YWwgdG8gemVyby4gSXQgbmV4dCBwcm92aWRlcyB0aGUgc3RhbmRhcmQgZXJyb3Igb2YgdGhlIGRpc3RyaWJ1dGlvbiBvZiAkXGVwc2lsb25faSQgKGFuZCB0aGUgZGVub21pbmF0b3IgdmFsdWUgc28gdGhhdCBhIHBlcnNvbiBjb3VsZCBjb21wdXRlIHRoZSBzdGFuZGFyZCBkZXZpYXRpb24gaW5zdGVhZCkuIE5leHQgaXMgdGhlICRSXjIkIGFuZCBhZGp1c3RlZCAkUl4yJC4gV2UgY2FuIHBlZWsgYXQgdGhlIHN1bW1hcnkubG0gZnVuY3Rpb24gdG8gZmlndXJlIG91dCBob3cgJFJeMiQgYW5kIGFkanVzdGVkICRSXjIkIGFyZSBjb21wdXRlZDoNCg0KMSkgJFJeMiA9IFxmcmFje01TU317KE1TUyArIFJTUyl9JA0KMikgJGFkai5SXjIgPSAxIC0gKDEgLSByLnNxdWFyZWQpICogXGZyYWN7KG4gLSBkZi5pbnQpfXtyZGZ9JA0KDQpNU1MgaXMgdGhlIG1lYW4gc3VtIG9mIHNxdWFyZXMuIFJTUyBpcyB0aGUgcmVzaWR1YWwgc3VtIG9mIHNxdWFyZXMuIGRmLmludCBpcyAxIGlmIGFuIGludGVyY2VwdCB0ZXJtIGlzIGVzdGltYXRlZCwgMCBpZiBub3QuIHJkZiBpcyB0aGUgcmVzaWR1YWwgZGVncmVlcyBvZiBmcmVlZG9tIChOLXApLg0KDQpJIGlubGN1ZGUgdGhpcyBvbmx5IGJlY2F1c2Ugc3R1ZGVudHMgYWx3YXlzIGFzayBhYm91dCB0aGUgYWRqdXN0ZWQgJFJeMiQuIE1vcmUgZ2VuZXJhbGx5LCAkUl4yJCBpcyBhIHNsaXBwZXJseSBzdGF0aXN0aWMsIGFuZCBpdCdzIG9mdGVuIHRpbWVzIG11Y2ggbGVzcyB1c2VmdWwgdGhhdCBpdCdzIHRvdXRlZCBhcyBiZWluZy4gV2UnbGwgZGlzY3VzcyB0aGUgY29tcHV0YXRpb25zIGFuZCBpbnRlcnByZXRhdGlvbnMgaW4gY2xhc3MuIFNvbWUgd2lsbCBiZW5lZml0IGZyb20gdGhpcywgb3RoZXJzIG5vdCBzbyBtdWNoLiBBbmQgdGhhdCdzIE9LLg0KDQpGaW5hbGx5LCB0aGUgRiBzdGF0aXN0aWMgaXMgdGhlIHRlc3Qgc3RhdGlzdGljIGZvciBhbGwgbGluZWFyIG1vZGVscy4gSXQgaXMgdXNlZCB0byB0ZXN0IHRoZSBudWxsIGh5cG90aGVzaXMgdGhhdCB0aGUgZGF0YSB3ZXJlIGdlbmVyYXRlZCBieSBhIHJhbmRvbSBwcm9jZXNzIGNlbnRlcmVkIG9uIGEgc2luZ2xlIHZhbHVlIGZvciB0aGUgbWVhbiwgYW5kIHZhcmlhbmNlICRcc2lnbWFeMiQuIFdlJ2xsIGNvdmVyIHRoYXQgaW4gbW9yZSBkZXRhaWwgbGF0ZXIuDQoNCioqKg0KDQoqKlEzLioqIEdpdmVuIHRoZSBvdXRwdXQgZm9yIHRoZSBsaW5lYXIgbW9kZWwgcHJlc2VudGVkIGFib3ZlIC0gZm9yIHRoZSBlZmZlY3Qgb2YgbW92ZW1lbnQgdHlwZSAocHVzaCB2LiBwdWxsKSBvbiB0aGUgZnJpY3Rpb24gY29lZmZpY2llbnQgLSB3aGF0IGlzIHRoZSBtZWFuIHZhbHVlIG9mIHRoZSBmcmljdGlvbiBjb2VmZmljaWVudCBmb3IgdGhlIHNwaWRlciBsZWdzIHRoYXQgd2VyZSBwdXNoaW5nPyAgIA0KYGBge3J9DQptZWFuKHNwaWRlciRmcmljdGlvbltzcGlkZXIkdHlwZT09InB1c2giXSkNCjEuMjExMjErKC0wLjc3OTAxKQ0KYGBgDQogICBUaGUgbGVncyB0aGF0IHdlcmUgcHVzaGluZyBoYXZlIGEgbWVhbiB2YWx1ZSBvZiAwLjQzLiBUaGlzIGlzIHRoZSBpbnRlcmNlcHQgcGx1cyB0aGUgZWZmZWN0IHNpemUgb2YgdGhlIHR5cGUgcHVzaCBlc3RpbWF0ZS4gDQoNCioqUTQuKiogRml0IHRoZSBsaW5lYXIgbW9kZWwgZm9yIHRoZSBkZXNpZ24geW91IHByb3ZpZGVkIGluIFExIGFuZCB3cml0ZSBkb3duIHRoZSB2YWx1ZSBmb3IgdGhlIG1lYW4gZnJpY3Rpb24gY29lZmZpY2llbnQgZm9yIGVhY2ggb2YgdGhlIDQgbGVnIHNldHMuICAgDQpgYGB7cn0NCmxtKGZyaWN0aW9ufmxlZyxkYXRhPXNwaWRlcikNCg0KbG0oZnJpY3Rpb25+bGVnKzAsZGF0YT1zcGlkZXIpICMgTXkgZmlyc3QgZGVzaWduIG1hdHJpeA0KDQpzcGlkZXIubG0gPC0gbG0oZnJpY3Rpb25+bGVnLGRhdGE9c3BpZGVyKQ0Kc3BpZGVyLmxtLmZvcmNlaW50emVybyA8LSBsbShmcmljdGlvbn5sZWcrMCxkYXRhPXNwaWRlcikNCg0KY29lZnMgPC0gYygiTDEiLCJMMiIsIkwzIiwiTDQiKQ0KY29lZnMuZnVsbCA8LSBleHBhbmQuZ3JpZChjKCJwdWxsIiwicHVzaCIpLGMoIkwxIiwiTDIiLCJMMyIsIkw0IikpDQoNCg0KZm9yKGkgaW4gMTo0KXsNCiAgcHJpbnQocGFzdGUoIk1lYW4gZnJpY3Rpb24gY29lZmZpY2llbnQgZm9yICIsIGNvZWZzW2ldLCAiOiBtZWFuID0gIiwNCiAgICAgICAgICAgIHJvdW5kKG1lYW4oc3BpZGVyJGZyaWN0aW9uW3NwaWRlciRsZWc9PWNvZWZzW2ldXSksMiksICNMMQ0KICAgICAgICAgICAgIiwgYmV0YV8iLCBpLTEsIiA9ICIsDQogICAgICAgICAgICByb3VuZChzcGlkZXIubG0uZm9yY2VpbnR6ZXJvJGNvZWZmaWNpZW50c1tpXSwyKSwgc2VwPSIiKSkNCiAgaWYoaT4xKXsNCiAgICBwcmludChwYXN0ZSgiICAqRWZmZWN0IHNpemUgZm9yIGNvZWZmaWNpZW50ICIsIGNvZWZzW2ldLCAiLCBiZXRhXyIsDQogICAgICAgICAgICAgICAgaS0xLCAiID0gIiwNCiAgICAgICAgICAgICAgICByb3VuZChzcGlkZXIubG0kY29lZmZpY2llbnRzW2ldLCAyKSwgc2VwPSIiKSkNCiAgfQ0KfQ0KDQoNCmZvcihpIGluIDE6NSkNCg0KYGBgDQoNCg0KYGBge3IsIGV2YWw9RkFMU0V9DQpwcmludChwYXN0ZSgiTWVhbiBmcmljdGlvbiBjb2VmZmljaWVudCBmb3IgTDE6ICBtZWFuPSIsDQogICAgICAgICAgICByb3VuZChtZWFuKHNwaWRlciRmcmljdGlvbltzcGlkZXIkbGVnPT0iTDEiXSksMiksICNMMQ0KICAgICAgICAgICAgIiwgYmV0YV8wID0gIiwNCiAgICAgICAgICAgIHNwaWRlci5sbS5mb3JjZWludHplcm8kY29lZmZpY2llbnRzWzFdLCBzZXA9IiAiKSkNCg0KcHJpbnQoIk1lYW4gZnJpY3Rpb24gY29lZmZpY2llbnQgZm9yIEwyOiIpICANCiBtZWFuKHNwaWRlciRmcmljdGlvbltzcGlkZXIkbGVnPT0iTDIiXSkgI0wyDQogc3BpZGVyLmxtJGNvZWZmaWNpZW50c1sxXStzcGlkZXIubG0kY29lZmZpY2llbnRzWzJdDQoNCnByaW50KCJNZWFuIGZyaWN0aW9uIGNvZWZmaWNpZW50IGZvciBMMzoiKQ0KIG1lYW4oc3BpZGVyJGZyaWN0aW9uW3NwaWRlciRsZWc9PSJMMyJdKSAjTDMNCiBzcGlkZXIubG0kY29lZmZpY2llbnRzWzFdK3NwaWRlci5sbSRjb2VmZmljaWVudHNbM10NCg0KcHJpbnQoIk1lYW4gZnJpY3Rpb24gY29lZmZpY2llbnQgZm9yIEw0OiIpIA0KIG1lYW4oc3BpZGVyJGZyaWN0aW9uW3NwaWRlciRsZWc9PSJMNCJdKSAjTDQNCiBzcGlkZXIubG0kY29lZmZpY2llbnRzWzFdK3NwaWRlci5sbSRjb2VmZmljaWVudHNbNF0NCg0KYGBgDQoNCioqUTUuKiogR2l2ZW4gd2hhdCB5b3UgdW5kZXJzdGFuZCBvZiB0aGUgZGF0YSwgZG9lcyB0aGUgd2F5IHdlJ3ZlIGJlZW4gZml0dGluZyB0aGUgbW9kZWwgc2VlbSB0byBtYWtlIGludHVpdGl2ZSBzZW5zZSwgb3Igc2hvdWxkIHdlIGJlIGZvcmNpbmcgdGhlIGludGVyY2VwdCB0byBiZSB6ZXJvPyBFeHBsYWluLiAgDQogIElmIGZvcmNpbmcgdGhlIGludGVyY2VwdCB0byBiZSB6ZXJvIGNhbiBnaXZlIHRoZSBtZWFuIGluc3RlYWQgb2YgdGhlIGVmZmVjdCBzaXplIG9mIGVhY2ggaW4gY29tcGFyaXNvbiB0byB0aGUgZmlyc3QgcGFyYW1ldGVyLCB0aGVuIGZvcmNpbmcgdGhlIGludGVyY2VwdCBtYWtlcyBzZW5zZS4gSG93ZXZlciwgaW4gc29tZSBjYXNlcyB3ZSBhcmUgaW50ZXJlc3RlZCBpbiB0aGUgZWZmZWN0IHNpemUgb3IgZGlmZmVyZW5jZSBmcm9tIGEgYmFzZWxpbmUgdmFsdWUgZm9yIHRyZWF0bWVudHMuIA0KDQoNCioqKg0KDQpGaW5hbGx5LCBsZXQncyBjb25zaWRlciBhIG11bHRpLXZhcmlhdGUgbW9kZWwgKHR3by13YXkgQU5PVkEpIGZvciB0aGUgYWRkaXRpdmUgZWZmZWN0cyBvZiBsZWcgc2V0IGFuZCBtb3ZlbWVudCB0eXBlIG9uIHRoZSBmcmljdGlvbiBjb2VmZmljaWVudC4gV2UnbGwgZml0IHRoZSBzaW1wbGUgbWFpbiBlZmZlY3RzIG1vZGVsIHdpdGhvdXQgYW5kIGludGVyYWN0aW9uLg0KDQoNCmBgYHtyfQ0KdHdvd2F5Rml0IDwtIGxtKGZyaWN0aW9uIH4gdHlwZSArIGxlZywgZGF0YSA9IHNwaWRlcikNCnN1bW1hcnkodHdvd2F5Rml0KQ0KYGBgDQoNCioqKg0KYGBge3IsZWNobz1GQUxTRX0NCnRhaWwobW9kZWwubWF0cml4KHNwaWRlciRmcmljdGlvbn5zcGlkZXIkbGVnK3NwaWRlciR0eXBlKzApLDUwKQ0KYGBgDQoNCioqUTYuKiogV3JpdGUgdGhlIHNhbXBsZSBzcGFjZSBmb3IgdGhpcyBleHBlcmltZW50YWwgZGVzaWduLiBIaW50OiB0aGlzIHdpbGwgYmUgdGhlIHNldCBvZiBhbGwgcG9zc2libGUgInN0YXRlcyIgZm9yIGxlZyBzZXQgYW5kIG1vdmVtZW50IHR5cGUgdGhhdCBjYW4gYmUgb2JzZXJ2ZWQgaW4gdGhlIGV4cGVyaW1lbnQuIEl0IG1heSBoZWxwIHRvIGxvb2sgYXQgdGhlIGFjdHVhbCBkZXNpZ24gbWF0cml4IHlvdSBkZXZlbG9wZWQgaW4gUTEuICAgDQogICAgDQogICAgVGhlIHNhbXBsZSBzcGFjZSBjb250YWlucyB0aGUgZm9sbG93aW5nIDggcm93czogIA0KYGBge3J9DQpleHBhbmQuZ3JpZChjKCJwdWxsIiwicHVzaCIpLGMoIkwxIiwiTDIiLCJMMyIsIkw0IikpDQpgYGAgDQoNCg0KKipRNy4qKiBVc2UgdGhhdCBzYW1wbGUgc3BhY2UgdG8gaW50ZXJwcmV0IGVhY2ggb2YgdGhlICRcaGF0e1xiZXRhX2l9JC4gVGhhdCBpcywgd3JpdGUgZG93biB0aGUgZXhwZXJpbWVudGFsIGNvbmRpdGlvbiBmb3IgdGhlIGludGVyY2VwdCwgZm9yIHR5cGVwdXNoLCBsZWdMMiwgZXRjLiAgIA0KDQogICBUaGUgZXhwZXJpbWVudGFsIGNvbmRpdGlvbi4uLiAgQXMgaW4gJFxoYXR7XGJldGFfMH0kIGlzIHRoZSA=</div>
 
 
 
