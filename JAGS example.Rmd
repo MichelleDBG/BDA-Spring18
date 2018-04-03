@@ -1,0 +1,379 @@
+---
+title: "JAGS example"
+author: "Michelle DePrenger-Levin"
+date: "April 2, 2018"
+output: html_document
+---
+
+```{r}
+#install.packages("R2jags")
+library(R2jags)
+```
+
+```{r}
+set.seed(1234)
+samplesize <- 50 
+xc <- sort(rnorm(samplesize)) # covariate
+#to make factor levels
+xf <- sample(c(0,1), size = samplesize, replace = T) # factor
+
+#design matrix
+lm()
+
+#y=mx+b
+# set 'true' differences between groups 0 and 1
+int_true_0 <- 30 # intercept for 0
+int_true_m_diff <- 5 # difference between intercepts
+slope_true_0 <- 10 # slope for 0
+slope_true_m_diff <- -3 # difference between slopes
+
+# predict with perfect model, mu intercept for true 0 level, add xf ... model matrix basically
+mu <- int_true_0 + xf * int_true_m_diff + 
+  (slope_true_0 + xf * slope_true_m_diff) * xc # true means
+
+plot(xc,mu)
+
+# add some noise around
+sigma <- 5 # true standard deviation of normal distributions
+y <- rnorm(samplesize, mean = mu, sd = sigma) # response
+
+plot(xc,y)
+
+# Combine into a data frame:
+dat <- data.frame(x1 = xc, x2 = xf, y = y)
+head(dat)
+plot(y ~ x1, pch=16, col = x2+1, data = dat)
+```
+Looks like from same slope, are these two different models or just one model? looks like from one model, same slope.  That and we know it's from the same parameters for the linear model and then the random factoring second parameter (x_2 [0,1]) 
+
+
+Setting different models to compare
+```{r}
+# these define the length and parameters and cofactors that are in the models,
+# parameters are the alpha, beta, tau
+jagsdata1 <- with(dat, list(y = y, x1 = x1, N = length(y)))
+jagsdata2 <- with(dat, list(y = y, x1 = x1, x2 = x2, N = length(y)))
+
+# as a function instead of out to a file and then back in. 
+lm1_jags <- function(){
+  # Likelihood:
+  for (i in 1:N){
+    y[i] ~ dnorm(mu[i], tau)
+    mu[i] <- alpha + beta * x1[i]
+  }
+  # Priors:
+  alpha ~ dnorm(0, 0.01)
+  beta ~ dnorm(0, 0.01)
+  sigma ~ dunif(0, 100)
+  tau <- 1 / (sigma * sigma)
+}
+
+# two components of alpha and beta, so there are two alphas and two betas, want to see how close to the truth. 
+#Need priors to have another loop to get the same, two alphas and two betas, only one sigma and one tau which is 1/sigma^2
+lm2_jags <- function(){
+  # Likelihood:
+  for (i in 1:N){
+    y[i] ~ dnorm(mu[i], tau) # tau is precision (1 / variance)
+    mu[i] <- alpha[1] + x2[i] * alpha[2] + (beta[1] + beta[2] * x2[i]) * x1[i]
+  }
+  # Priors:
+  for (i in 1:2){
+    alpha[i] ~ dnorm(0, 0.01)
+    beta[i] ~ dnorm(0, 0.01)
+  }
+  sigma ~ dunif(0, 100)
+  tau <- 1 / (sigma * sigma)
+}
+
+#for alpha, beta, and sigma, pick a random number start for each one from normal
+# might want thinning, because assuming in little steps we're getting lots of autocorelation but picking only ever few steps. should be bigger spaced steps kept when parameter space is smaller
+init_values1 <- function(){
+  list(alpha = rnorm(1), beta = rnorm(1), sigma = runif(1))
+}
+
+init_values2 <- function(){
+  list(alpha = rnorm(2), beta = rnorm(2), sigma = runif(1))
+}
+
+#What I want to get back into R, 
+params <- c("alpha", "beta", "sigma","deviance")
+
+#Where to find data "jagsdata1", for inits  
+#They output how many chains, how long, what thrown out, thinning? so get how many simulations kept. 
+# then summaries for marginal distributions of each parameter. , quantiles. 
+fit_lm1 <- jags(data = jagsdata1, inits = init_values1, parameters.to.save = params,
+                model.file = lm1_jags, n.chains = 1, n.iter = 12000, n.burnin = 2000,
+                n.thin = 10, DIC = F)
+fit_lm2 <- jags(data = jagsdata2, inits = init_values2, parameters.to.save = params,
+                model.file = lm2_jags, n.chains = 1, n.iter = 12000, n.burnin = 2000,
+                n.thin = 10, DIC = F)
+fit_lm1
+fit_lm2
+
+# this is the second one. Two cofactor model
+fit_lm2 <- jags(data = jagsdata2, inits = init_values2, parameters.to.save = params,
+                model.file = lm2_jags, n.chains = 1, n.iter = 12000, n.burnin = 2000,
+                n.thin = 10, DIC = F)
+# this one the beta slopes are offsets, will get different results in each run. 
+fit_lm2
+
+#the parameters you need for abline plot. but instead
+plot(fit_lm1)
+plot(fit_lm2)
+```
+
+
+```{r}
+#makes JAGS opbject as an MCMC object
+lm1_mcmc <- as.mcmc(fit_lm1)
+lm2_mcmc <- as.mcmc(fit_lm2)
+plot(lm1_mcmc)
+plot(lm2_mcmc)
+```
+
+More chains better, parralel chains
+```{r}
+fit_lm1 <- jags(data = jagsdata1, inits = init_values1, parameters.to.save = params,
+                model.file = lm1_jags, n.chains = 3, n.iter = 12000, n.burnin = 2000,
+                n.thin = 10, DIC = F)
+fit_lm2 <- jags(data = jagsdata2, inits = init_values2, parameters.to.save = params,
+                model.file = lm2_jags, n.chains = 3, n.iter = 12000, n.burnin = 2000,
+                n.thin = 10, DIC = F)
+fit_lm1
+fit_lm2
+
+# want effective sample size, then should be near number of samples you had, 1100 not great. Want Rhat to be near 1. n.eff is what you want, want n.eff to match the number of simulations. 
+```
+
+```{r}
+plot(fit_lm1)
+plot(fit_lm2)
+
+lm1_mcmc <- as.mcmc(fit_lm1)
+lm2_mcmc <- as.mcmc(fit_lm2)
+plot(lm1_mcmc)
+plot(lm2_mcmc)
+
+str(lm1_mcmc)
+str(fit_lm1)
+
+str(fit_lm1)
+str(fit_lm2)
+
+gelman.diag(lm1_mcmc)
+heidel.diag(lm1_mcmc)
+raftery.diag(lm1_mcmc)
+
+#Data in list, as array, list, and matrix can use whichever works best. 
+#can also get the mean sd of each paramter. 
+
+head(fit_lm1$BUGSoutput$sims.matrix)
+fit_lm1
+
+#50 sample size 
+#want to iterate over all the chain steps. Not the average
+all.parameters <- fit_lm1$BUGSoutput$sims.matrix
+
+mu.all <- c()
+y.new <- list()
+for(j in 1:3000){
+  for(i in 1:50){
+  mu.all[i] <- all.parameters[j,1] + all.parameters[j,2]*xc[i]
+  }
+  y.new[[j]] <- mu.all
+}
+
+sim.data <- do.call(rbind,y.new)
+str(sim.data)
+```
+Bayesian p-value
+```{r}
+
+CV <- apply(sim.data,1,function(x){
+  cv <- sd(x)/mean(x)
+  cv
+})
+
+hist(CV, xlim=c(sd(xc)/mean(xc)-0.1,max(CV)))
+points(sd(xc)/mean(xc),100)
+segments(sd(xc)/mean(xc),0,sd(xc)/mean(xc),100)
+text(sd(xc)/mean(xc),150, labels="CV of data", cex=0.75)
+
+
+
+T.k <- apply(sim.data,1,function(x){
+  if((sd(x)/mean(x)) >= (sd(xc)/mean(xc))){
+    1
+  } else {
+    0
+  }
+})
+
+```
+
+```{r}
+fit_lm2
+#alpha_1, alpha_2, beta_1, beta_2, sigma, deviance
+
+
+
+
+#50 sample size 
+#want to iterate over all the chain steps. Not the average
+all.parameters2 <- fit_lm2$BUGSoutput$sims.matrix
+
+mu.all <- c()
+y.new <- list()
+for(j in 1:3000){
+  for(i in 1:50){
+  mu.all[i] <- all.parameters[j,1] + all.parameters[j,2]*xc[i]
+  }
+  y.new[[j]] <- mu.all
+}
+
+sim.data <- do.call(rbind,y.new)
+str(sim.data)
+```
+Bayesian p-value
+```{r}
+
+CV <- apply(sim.data,1,function(x){
+  cv <- sd(x)/mean(x)
+  cv
+})
+
+hist(CV, xlim=c(sd(xc)/mean(xc)-0.1,max(CV)))
+points(sd(xc)/mean(xc),100)
+segments(sd(xc)/mean(xc),0,sd(xc)/mean(xc),100)
+text(sd(xc)/mean(xc),150, labels="CV of data", cex=0.75)
+
+
+T.k <- apply(sim.data,1,function(x){
+  if((sd(x)/mean(x)) >= (sd(xc)/mean(xc))){
+    1
+  } else {
+    0
+  }
+})
+
+
+mean(T.k)
+```
+
+JAGS tutorial <http://www.jkarreth.net/files/bayes-cph_Tutorial-JAGS.pdf>   
+<http://www.johnmyleswhite.com/notebook/2010/08/20/using-jags-in-r-with-the-rjags-package/>   Blog info about JAGS why and how, linkes to example code... <http://jeromyanglim.blogspot.com/2012/04/getting-started-with-jags-rjags-and.html> 
+
+#Scott's way
+```{r}
+alpha.sim <- fit_lm1$BUGSoutput$sims.list$alpha
+beta.sim <- fit_lm1$BUGSoutput$sims.list$beta
+sigma.sim <- fit_lm1$BUGSoutput$sims.list$beta
+
+pcc <- function(alpha,beta,sigma,x){
+  rnorm(50, (alpha+beta*x), sigma)
+}
+
+output <- mapply(pcc, alpha.sim, beta.sim, sigma.sim, xc) #hummm
+
+str(sim.data)
+str(y.new)
+str(y.50)
+
+#Team name, who we are, project 
+#Like try WAIC
+```
+
+```{r}
+## alli's addition
+
+alpha <- fit_lm1$BUGSoutput$sims.list$alpha
+beta <- fit_lm1$BUGSoutput$sims.list$beta 
+sigma <- fit_lm1$BUGSoutput$sims.list$sigma
+x <- dat$x1
+
+newlm1 <- function(alpha, beta, sigma, x){
+  rnorm(50, 
+        alpha + beta * x, sigma)
+}
+
+alpha1 <- fit_lm2$BUGSoutput$sims.list$alpha[1]
+alpha2 <- fit_lm2$BUGSoutput$sims.list$alpha[2]
+beta1 <- fit_lm2$BUGSoutput$sims.list$beta[1]
+beta2 <- fit_lm2$BUGSoutput$sims.list$beta[2]
+sigma2 <- fit_lm2$BUGSoutput$sims.list$sigma
+x1 <- dat$x1
+x2 <- dat$x2
+
+newlm2 <- function(alpha1, alpha2, beta1, beta2, sigma, x1, x2){
+  rnorm(50, 
+        alpha1 + x2 * alpha2 + (beta1 + beta2 * x2) * x1, sigma)
+}
+
+ynewlm1 <- mapply(newlm1, alpha, beta, sigma, x)
+ynewlm2 <- mapply(newlm2, alpha1, alpha2, beta1, beta2, sigma, x1, x2)
+
+
+sdlm1 <- apply(ynewlm1,2,sd)
+meanlm1 <- apply(ynewlm1,2,mean)
+cvlm1 <- sdlm1/meanlm1
+
+sdlm2 <- apply(ynewlm2,2,sd)
+meanlm2 <- apply(ynewlm2,2,mean)
+cvlm2 <- sdlm2/meanlm2
+
+cv <- sd(dat$y)/mean(dat$y)
+
+hist(cvlm1)
+abline(v = cv)
+
+hist(cvlm2)
+abline(v = cv)
+
+
+```
+
+Calculate a p-value  
+"the probability of observing a value equal or more extreme given a model, conditioned on a model"   
+We are simulating the future data, if we were to repeat the experiment infinite times, this is the limit, the area under the curve of my value or greater.  
+This is not a null model, this is model that we fit. 
+```{r}
+#1 generate the posterier predictive distributions 
+
+cv <- apply(sim.data,1,FUN=function(x){
+  sd(x)/mean(x)
+})
+
+hist(cv)
+
+# predictive distribution of cv = sd/mu  as the test statistic 
+
+#go through and see if vector of cv from simulated is more than or not of the derived data
+
+
+```
+
+#Gelman and Rubin diagnostics   
+with an MCMC object  
+```{r}
+str(lm1_mcmc)
+
+gelman.diag(lm1_mcmc)
+
+```
+
+
+Climate Change forest biodiveristy <http://blue.for.msu.edu/macro/>   
+<http://sites.nicholas.duke.edu/clarklab/projects/biodiversity/>  
+
+Using Joint distribution modeling <https://cran.r-project.org/web/packages/gjam/vignettes/gjamVignette.html#version-2.2.1> 
+<http://sites.nicholas.duke.edu/clarklab/code/>   
+GJAM <http://sites.nicholas.duke.edu/clarklab/code/>  
+
+
+
+
+
+```{r}
+
+
+```

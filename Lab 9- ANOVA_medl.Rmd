@@ -1,0 +1,93 @@
+---
+title: "Lab 9 - ANOVA tables"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+In this lab, we'll work on creating more complex design matrices, interpreting coefficient outputs, and conducting ANOVA tests. The data used in this lab are provided in Quinn and Kough (2002) and were accessed from https://qkstats.com/data-files/.
+
+Let's start with a data set from Hall et al. (2000), who examined the effects nitrogen and phosphorus on macroinvertebrate communities in artificial subtidal habitats. Microinvertebrate species richness was measured after either 2, 4, or 6 months, and habitats either were enriched with N and P or were in a control group where nutrients were not added. Species richness is included as a log transformed response variable in the data.
+
+
+```{r}
+hall <- read.csv("P:/My Documents/BDA_Spring2018/hall.csv")
+
+fit.hall <- lm(RICHNESS ~ TREAT * as.factor(TIME), data = hall)
+```
+Q1. How many parameters are we estimating?   
+    We are estimating 6 parameters.  
+
+Q2. Create the design matrix by writing one row for each parameter included in the model.  
+    
+```{r}
+treat <- factor(unique(hall$TREAT))
+time <- factor(unique(hall$TIME))
+model.df <- expand.grid(treat,time)
+model.matrix(~Var1*Var2, data=model.df) #Var 1 is treatment and Var 2 is time
+```
+
+Q3. Write the equation for each parameter in terms of the $\beta$s.   
+       1- Intercept,   $\beta_0$: control+time 2 mean   
+       2- $\beta_1$: + $\beta_0$ nutrient+time 2 mean
+       3- $\beta_2$: + $\beta_0$ control+time 4 mean
+       4-            + $\beta_0$ + $\beta_1$ + $\beta_4$ nutrient+time 4 mean   
+       5- $\beta_3$: + $\beta_0$ control+time 6 mean   
+       6-            + $\beta_0$ + $\beta_1$ + $\beta_5$  nutrient+time 6 mean      
+       4- $\beta_4$: time effect offset of nutrient at time 4 from $\beta_1$    
+       6- $\beta_5$: time effect offset between control and nutrient at time 6 from $\beta_1$    
+
+
+```{r}
+summary(fit.hall)
+
+anova(fit.hall)
+```
+
+Q4. Interpret the p-value. What does it tell us about our model?   
+    The *p-value* for the linear model tells us that given the F distribution on 5 and 23 degrees of freedom, we have a probability of 7.1e^-13 of seeing these redutions in standard error given these means versus a grand mean. A F ratio of that or larger MMS/MMS for residuals differences if repeated.  is different from solid average, does it matter that we've broken into group means, global test for grand mean ... talk about all - where the anova breaks it down to 
+
+
+Q5. You have a supervisor that wants to know about treatment effects. What do you tell them? What is the effect of increased nutrients on microinvertebrate communities?
+
+
+
+Loyn (1987) was interested in the relationship between habitat characteristics and avian abundance and diversity. In the model below, we estimate abundance as a function of both patch area and stock grazing history, where 1 represents light grazing and 5 represents heavy grazing.
+
+
+```{r}
+birds<-read.csv("P:/My Documents/BDA_Spring2018/loyn.csv")
+str(birds)
+
+fit.loyn <- lm(ABUND ~ AREA * as.factor(GRAZE), data = birds)
+```
+
+Q6. How many parameters are we estimating?
+
+Q7. Create the design matrix by writing one row for each parameter included in the model.
+
+Q8. Write the equation for each parameter in terms of the $\beta$s.
+
+
+```{r}
+summary(fit.loyn)
+
+anova(fit.loyn)
+```
+
+Q9. Interpret the p-value.
+
+
+Q10. Interpret the coefficients. 
+
+
+Q11. Describe how the influence of grazing changes with patch size. 
+
+
+Q12. Use the function interaction.plot to show how the influence of area changes depending on grazing level. Hint: Abundance will go on the y-axis, area on x-axis, and you'll have a trace for the different levels of grazing. Use the following data set:
+
+```{r}
+modified.data <- data.frame(GRAZE = birds$GRAZE,
+AREA = seq(min(birds$AREA), 100, length.out = 2))
+predicted.values <- predict(fit.loyn, newdata = modified.data)
+```

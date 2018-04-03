@@ -1,12 +1,12 @@
 ---
 title: "Lab 8 - design matrix"
 output:
+  html_document: default
+  html_notebook: default
   pdf_document:
     fig_caption: yes
     fig_height: 4
     fig_width: 6
-  html_notebook: default
-  html_document: default
 ---
 
 This lab offers practice with design matrices and an introduction to summaries of the lm() function. Let's work with the spider data, described in 5.8
@@ -19,46 +19,25 @@ spider <- read.csv("P:/My Documents/BDA_Spring2018/spider_wolff_gorb_2013.csv")
 
 **Q1.** Create the design matrix for modeling the effect of different leg sets on the observed friction coefficient. Provide only the R code for doing this (it's a long matrix), and write a few sentences to describe the components of the matrix (i.e. say what comprise the rows, columns, and values in each cell).
 ```{r}
-spider.dm <- model.matrix(~factor(spider$leg) -1) #as a boolean 
+spider.dm <- model.matrix(~factor(spider$leg)) #took out "-1" as a boolean 
 spider.dm[c(67:70,99:100,240:241),] #subset of the design matrix
 ```
-    This design matrix acts as a boolean matrix setting the value in a cell to 1 when that individual (row) has the friction value for the corresponding leg pair in the appropriate column. Column 1 ("L1") has a 1 in rows with a cooresponding "L1" in the row of the spider data frame leg column and a 0 in all other rows. Likewise, column 2 of the design matrix only has 1s in rows for which the spider data frame leg column is "L2". This pattern is continued for "L3" and "L4".  
-
-
-#Take out!!!   
-   If you are asking for the effect of different leg sets and whether the legs are pushing or pulling, then the design matrix becomes:    
-```{r}
-spider.full.dm <- model.matrix(friction ~ factor(leg) + factor(type), data=spider)
-spider.full.dm[c(1:2,67:70,80:85,99:100,240:241,nrow(spider)),] #subset of the design matrix
-```
-   
+    This design matrix sets the intercept to 1 for all rows (individuals, samples). For the folloiwng columns, the value in a cell is 1 when that individual (row) has the friction value for the corresponding leg pair in the appropriate column. Column 1 ("Intercept") has a 1 in every row. The second column has a 1 in a row with a corresponding "L2" in the row of the spider dataframe "leg" column and a 0 in all other rows. Likewise, column 3 and 4 of the design matrix only has 1s in rows for which the spider data frame leg column is "L3" or "L4" respectivly.  
+    
 
 **Q2.** How many parameters in this design? Explain what they are and what information they provide, referencing the design matrix you produced in Q1. Then provide the parameter matrix.
-   
-#######   
-Change it to not offset, they are all the mean. 
-There are four parameters in the leg design. The first column, $\beta_1$, is the mean of friction from L1 leg pair. $\beta_2$ is the offset from the intercept to the mean of L2. legL3, $\beta_3$, is the effect size of L3 from L1 ($\beta_1$ + $\beta_3$ = mean friction of L3). The final parameter is $\beta_4$ which is the effect size of L4 (the offset from L1 to L4).   
-$$
-{\left(\begin{array}{cc}
-  \beta_{1}\\
-  \beta_{2}\\
-  \beta_{3}\\
-  \beta_{4}
-  \end{array}\right)
-}
-$$
 
-   This full design matrix is not boolean (missing the "+0"). In this case the Intercept, $\beta_0$, is the mean friction of L1 when pulling. The last column, $\beta_4$, is the effect size of pushing so mean pushing friction of L1 is $\beta_0$ + $\beta_4$. The parameters $\beta_j$ (j = 1-3) are the offset of pulling friction for each leg (L2 to L4). Additionally adding $\beta_4$ to any of these will give the effect size of pushing to each leg pair.     
+There are four parameters in the leg design. The inercept, $\beta_0$, is the mean of friction from L1 leg pair. Then $\beta_1$ is the offset from the intercept to the mean of L2, $\beta_0$ + $\beta_1$. The third parameter, $\beta_2$, is the effect size of L3 from L1 ($\beta_0$ + $\beta_2$ = mean friction of L3). The final parameter is $\beta_3$ which is the effect size of L4 (the offset from L1 to L4).   
 $$
 {\left(\begin{array}{cc}
   \beta_{0}\\
   \beta_{1}\\
   \beta_{2}\\
-  \beta_{3}\\
-  \beta_{4}
+  \beta_{3}
   \end{array}\right)
 }
 $$
+
 
 ***
 
@@ -91,43 +70,51 @@ Finally, the F statistic is the test statistic for all linear models. It is used
 **Q3.** Given the output for the linear model presented above - for the effect of movement type (push v. pull) on the friction coefficient - what is the mean value of the friction coefficient for the spider legs that were pushing?   
 ```{r}
 mean(spider$friction[spider$type=="push"])
+lm1 <- summary(modelfit)
+signif(lm1$coefficients[1]+lm1$coefficients[2],2)
 1.21121+(-0.77901)
 ```
    The legs that were pushing have a mean value of 0.43. This is the intercept plus the effect size of the type push estimate. 
 
 **Q4.** Fit the linear model for the design you provided in Q1 and write down the value for the mean friction coefficient for each of the 4 leg sets.   
 ```{r}
-lm(friction~leg,data=spider)
-
-lm(friction~leg+0,data=spider) # My first design matrix
-
 spider.lm <- lm(friction~leg,data=spider)
-spider.lm.forceintzero <- lm(friction~leg+0,data=spider)
+spider.lm.forceintzero <- lm(friction~leg+0,data=spider) #boolean design
 
 coefs <- c("L1","L2","L3","L4")
 coefs.full <- expand.grid(c("pull","push"),c("L1","L2","L3","L4"))
 
+summary(spider.lm)
+
+
+#ctrl+shift+c
+#for(i in 1:4){
+#   print(paste("Mean friction coefficient for ", coefs[i], ": mean = ",
+#             round(mean(spider$friction[spider$leg==coefs[i]]),2), #L1
+#             ", and when intercept is forced through zero, beta_", i," = ",
+#             round(spider.lm.forceintzero$coefficients[i],2), sep=""))
+#   if(i>1){
+#     print(paste("  *Effect size for coefficient ", coefs[i], ", beta*_",
+#                 i-1, " = ",
+#                 round(spider.lm$coefficients[i], 2), sep=""))
+#   }
+# }
 
 for(i in 1:4){
-  print(paste("Mean friction coefficient for ", coefs[i], ": mean = ",
-            round(mean(spider$friction[spider$leg==coefs[i]]),2), #L1
-            ", beta_", i-1," = ",
-            round(spider.lm.forceintzero$coefficients[i],2), sep=""))
-  if(i>1){
-    print(paste("  *Effect size for coefficient ", coefs[i], ", beta_",
-                i-1, " = ",
-                round(spider.lm$coefficients[i], 2), sep=""))
+  if(i==1){
+    print(paste("The mean friction coefficient for", coefs[i], "is beta_0 =",
+                signif(spider.lm$coefficients[1],2),sep=" "))
+  } else {
+    print(paste("The mean friction coefficient for ", coefs[i], " is beta_0 + beta_",
+                i-1, " = ", signif(spider.lm$coefficients[1]+
+                                     spider.lm$coefficients[i],2), sep=""))
   }
 }
-
-
-#for(i in 1:5)
-
 ```
 
 
-**Q5.** Given what you understand of the data, does the way we've been fitting the model seem to make intuitive sense, or should we be forcing the intercept to be zero? Explain.  
-  Forcing the intercept to be zero makes the $\hat{\beta}$ be the offset from 0, the mean instead of the effect size in comparison to the baseline value of each in comparison to the first parameter. When there is not a level that is the control, then forcing the intercept makes sense. However, in some cases we are interested in the effect size or difference from a baseline value ("L1"), i.e. treatments compared to a control mean. 
+**Q5.** Given what you understand of the data, does the way we've been fitting the model seem to make intuitive sense, or should we be forcing the intercept to be zero? Explain.      
+  Forcing the intercept to be zero makes the $\hat{\beta}$ be the offset from 0, the mean of each instead of the effect size in comparison to the baseline value of the first factor, L1. When there is not a level that is the control, as in this case, then forcing the intercept to zero makes sense. In caseswhen  we are interested in the effect size or difference from a baseline value ("L1"), i.e. treatments compared to a control mean then the way we fit the model in Q1 is approporiate.  
 
 
 ***
@@ -142,7 +129,9 @@ summary(twowayFit)
 
 ***
 ```{r,echo=FALSE}
-tail(model.matrix(spider$friction~spider$leg+spider$type+0),50)
+tail(model.matrix(spider$friction~spider$leg+spider$type+0),20)
+
+tail(model.matrix(spider$friction~spider$leg+spider$type),20)
 ```
 
 **Q6.** Write the sample space for this experimental design. Hint: this will be the set of all possible "states" for leg set and movement type that can be observed in the experiment. It may help to look at the actual design matrix you developed in Q1.   
@@ -164,15 +153,78 @@ data.frame(leg,type)
 lm(friction~leg+type -1, data=spider)
 aggregate(friction~type+leg, mean, data=spider)
 
-model.matrix(~ type + leg -1)
+# effect size
+matrixmodel.q1 <- model.matrix(~ type+leg)
+matrixmodel.q1
+lm.multi <- lm(friction~leg+type, data=spider)
+betavec <- lm.multi$coefficients
+exp.cond.q1 <- matrixmodel.q1 %*% betavec
+
+# means forced zero for type
+matrixmodel <- model.matrix(~ type + leg -1)
+matrixmodel
+lm.multi.for0 <- lm(friction~type + leg -1, data=spider)
+betavec.for0 <- lm.multi.for0$coefficients
+exp.cond <- matrixmodel %*% betavec.for0
+
+# means forced zero for leg
+matrixmodel.swap <- model.matrix(~ leg +type -1)
+matrixmodel.swap
+lm.multi.for0.1 <- lm(friction~leg+type -1, data=spider)
+betavec.for0.1 <- lm.multi.for0.1$coefficients
+exp.cond <- matrixmodel.swap %*% betavec.for0.1
+
+for(i in 1:8){
+    print(paste("                             Experimental condition for ", leg[i], type[i],
+                "is", signif(exp.cond.q1[i],2)))
+  print(paste("Experimental condition when intercept forced through zero", 
+              leg[i], type[i],
+              "is", signif(exp.cond.q1[i],2)))
+}
 ```
 
-   The experimental condition is:   
-      1 - L1 pull is $\beta_1$   
-      2 - L1 push is $\beta_1$ + $\beta_2$    
-      3 - L2 pull is $\beta_3$    
-      4 - L2 push is $\beta_3$ + $\beta_2$   
-      5 - L3 pull is $\beta_1$ + $\beta_4$   
-      6 - L3 push is $\beta_4$   
-      7 - L4 pull is $\beta_4$ + $\beta_2$  
-      8 - L4 pull is $\beta_2$ + $\beta_5$   
+   The experimental condition for the model is:   
+      1 - L1 pull is $\beta_0$   
+      2 - L1 push is $\beta_0$ + $\beta_1$    
+      3 - L2 pull is $\beta_0$ + $\beta_2$    
+      4 - L2 push is $\beta_0$ + $\beta_1$ + $\beta_2$   
+      5 - L3 pull is $\beta_0$ + $\beta_3$   
+      6 - L3 push is $\beta_0$ + $\beta_1$ + $\beta_3$    
+      7 - L4 pull is $\beta_0$ + $\beta_4$  
+      8 - L4 pull is $\beta_0$ + $\beta_1$ + $\beta_4$   
+ 
+   When the leg set is the intercept set to zero, the experimental condition should be:  
+      1 - L1 pull is $\beta_1$     
+      2 - L1 push is $\beta_2$    
+      3 - L2 pull is $\beta_1$ + $\beta_3$     
+      4 - L2 push is $\beta_2$ + $\beta_3$   
+      5 - L3 pull is $\beta_1$ + $\beta_4$     
+      6 - L3 push is $\beta_2$ + $\beta_4$       
+      7 - L4 pull is $\beta_1$ + $\beta_5$    
+      8 - L4 pull is $\beta_2$ + $\beta_5$    
+
+
+   But the matrix model with the type intercept set to zero calculates:       
+      1 - L1 pull is $\beta_1$     
+      2 - L1 push is $\beta_1$ + $\beta_5$     
+      3 - L2 pull is $\beta_2$          
+      4 - L2 push is $\beta_2$ + $\beta_5$   
+      5 - L3 pull is $\beta_3$         
+      6 - L3 push is $\beta_3$ + $\beta_5$       
+      7 - L4 pull is $\beta_4$            
+      8 - L4 pull is $\beta_4$ + $\beta_5$      
+  
+
+   Can the intercept of only one variable be set to zero and the other is an effect size. Why is that? Can more than one be forced to zero?    
+
+   This full design matrix is not boolean (missing the "+0" or "-1"). In this case the intercept, $\beta_0$, is the mean friction of L1 when pulling. The second column, $\beta_1$, is the effect size of pushing so mean pushing friction of L1 is $\beta_0$ + $\beta_1$. The parameters $\beta_j$ (j = 3-5) are the offset of leg set friction for each leg (L2 to L4) from L1. Adding $\beta_0$ + $\beta_1$ to any of these will give the effect size of pushing to each leg pair.     
+$$
+{\left(\begin{array}{cc}
+  \beta_{0}\\
+  \beta_{1}\\
+  \beta_{2}\\
+  \beta_{3}\\
+  \beta_{4}
+  \end{array}\right)
+}
+$$

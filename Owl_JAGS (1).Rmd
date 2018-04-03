@@ -1,0 +1,86 @@
+---
+title: "Owls"
+author: "Dylan Simpson, Sam Mason"
+date: "April 2, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Front matter}
+library(rjags)
+library(coda)
+# Read in data:
+forage <- read.csv("forage.csv")
+# Coerce territory to an index:
+forage$terr_in <- as.numeric(forage$terr)
+# Scale canopy volume:
+forage$foc_vol.scale <- as.numeric(scale(forage$foc_vol))
+```
+
+```{r Setting up the model}
+dataList <- list(
+  y = forage$use,
+  x = forage$foc_vol.scale,
+  terr = forage$terr_in
+)
+
+inits1 <- list(
+  "a0.raw" = 0,
+  "b0.raw" = 0,
+  "a_terr.raw" = rep(0,5),
+  "b_terr.raw" = rep(0,5),
+  "tau" = rep(.01,2)
+)
+
+inits2 <- list(
+  "a0.raw" = 1,
+  "b0.raw" = 1,
+  "a_terr.raw" = rep(1,5),
+  "b_terr.raw" = rep(1,5),
+  "tau" = rep(.05,2)
+)
+
+inits3 <- list(
+  "a0.raw" = -1,
+  "b0.raw" = -1,
+  "a_terr.raw" = rep(-1,5),
+  "b_terr.raw" = rep(-1,5),
+  "tau" = rep(.005,2)
+)
+
+inits <- list(
+  inits1, inits2, inits3
+)
+```
+
+
+```{r Initialize the model}
+mod.vol <- jags.model(
+  "OwlMod_continuousX.R",
+  data = dataList,
+  inits = inits,
+  n.chains = 3,
+  n.adapt = 10000
+)
+```
+
+```{r Burn in and run}
+# Burn in:
+update(mod.vol, n.iter = 10000)
+
+# Run chain and record samples
+modVol.coda <- coda.samples(mod.vol,
+                            # Recognizing we aren't really interested in them, we still print the .raw parameters for investigating convergence problems
+                        variable.names = c("a0.raw", "b0.raw", "a0", "b0", "a_terr", "b_terr", "sigma.terr.int", "sigma.terr.slope", "a_terr.raw", "b_terr.raw"),
+                        n.iter = 40000)
+```
+
+```{r Plots and Summaries}
+# Convergence tests:
+traceplot(modVol.coda, col = c("red", "green", "blue")) # we can see immediately from these that there was no convergence, but another option is the Gelman plot:
+gelman.plot(modVol.coda) # we want these lines to land below 1.1, and we can see from the y axis that that the values are far too large!
+summary(modVol.coda)
+```
