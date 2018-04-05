@@ -1,6 +1,7 @@
 ---
 title: "Lab 9 - ANOVA tables"
 output:
+  word_document: default
   pdf_document: default
   html_notebook: default
 ---
@@ -45,11 +46,30 @@ anova(fit.hall)
 ```
 
 Q4. Interpret the p-value. What does it tell us about our model?   
-    The *p-value* for the linear model tells us that given the F distribution on 5 and 23 degrees of freedom, we have a probability of 7.1e^-13 of seeing these redutions in standard error given these means versus a grand mean. A F ratio of that or larger MMS/MMS for residuals differences if repeated.  is different from solid average, does it matter that we've broken into group means, global test for grand mean ... talk about all - where the anova breaks it down to 
+    The *p-value* for the linear model tells us that given the F distribution on 5 and 23 degrees of freedom, we have a probability of 7.1e^-13 of seeing that F ratio (a redution in residuals around the group means versus a grand mean). The p-value gives the chance of an F-statistic of 66.01 or larger if the experiment was repeated infinite times. The ANOVA breaks the p-values into which grouping reduces the residual sum of squares. The interaction factor, treatment at each time step, is signfiant. There is a difference between control and nutrient and that effect changes at each time step. It does not make sense to then interpret the difference between all control groups vs. nutrient groups nor does it make sense to interpret the difference of means at each time step when there is evidence that the interaction term best describes the data. 
+    **if they didnt' matter, would be surprising that the p-value is so low, the reduction of residuals and effect size is by chance. or doesn't matter... departure from what we'd expect given the data.** if really no signal from a grouping, then should be surprised that got such a low p-value. p-value is comparing to the null being that the grand mean is best way to explain/have lowest residuals. If main effects are also with interaction effect, then telling about a main effect is sloppy, there's more information when don't just talk about the main effects, there's something else that might be driving why different among groups (the interaction effect) 
 
 
-Q5. You have a supervisor that wants to know about treatment effects. What do you tell them? What is the effect of increased nutrients on microinvertebrate communities?
+Q5. You have a supervisor that wants to know about treatment effects. What do you tell them? What is the effect of increased nutrients on microinvertebrate communities?   
+```{r}
+boxplot(hall$RICHNESS~hall$TREAT+hall$TIME,col=c(rgb(0,0,0,.15),rgb(1,0,0,.15)),las=2, outline=F)
+stripchart(RICHNESS~TREAT+TIME, data=hall, method="jitter", pch=16, 
+           vertical=TRUE, add=TRUE)
 
+cont4 <- fit.hall$coefficients[1]+fit.hall$coefficients[3]
+nut4 <- fit.hall$coefficients[1]+fit.hall$coefficients[3]+fit.hall$coefficients[2]+fit.hall$coefficients[5]
+cont6 <- fit.hall$coefficients[1]+fit.hall$coefficients[4]
+nut6 <- fit.hall$coefficients[1]+fit.hall$coefficients[4]+fit.hall$coefficients[2]+fit.hall$coefficients[6]
+
+nut4-cont4
+(nut4-cont4)*1.96
+nut6-cont6
+
+
+```
+   
+    - The effect of increased nutrients on microinvertebrate communities is an increase in richness of 0.8 at time 2, 11 at time 4, and 7 at time 6.    
+       
 
 
 Loyn (1987) was interested in the relationship between habitat characteristics and avian abundance and diversity. In the model below, we estimate abundance as a function of both patch area and stock grazing history, where 1 represents light grazing and 5 represents heavy grazing.
@@ -62,11 +82,33 @@ str(birds)
 fit.loyn <- lm(ABUND ~ AREA * as.factor(GRAZE), data = birds)
 ```
 
-Q6. How many parameters are we estimating?
+Q6. How many parameters are we estimating?  
+  We are estimating 10 parameters   
 
-Q7. Create the design matrix by writing one row for each parameter included in the model.
+Q7. Create the design matrix by writing one row for each parameter included in the model. 
+```{r}
+modelout <- tapply(birds$AREA,birds$GRAZE,mean)
+model.matrix(~modelout*factor(unique(birds$GRAZE)))
+grazefactor <- as.factor(birds$GRAZE)
 
-Q8. Write the equation for each parameter in terms of the $\beta$s.
+plot(ABUND~log(AREA), col=grazefactor, data=birds)
+abline(lm(ABUND~log(AREA), data=birds[birds$GRAZE==1,]), col=1)
+abline(lm(ABUND~log(AREA), data=birds[birds$GRAZE==2,]), col=2)
+abline(lm(ABUND~log(AREA), data=birds[birds$GRAZE==3,]), col=3)
+abline(lm(ABUND~log(AREA), data=birds[birds$GRAZE==4,]), col=4)
+abline(lm(ABUND~log(AREA), data=birds[birds$GRAZE==5,]), col=5)
+abline(h=mean(birds$ABUND), lty=4)
+legend("bottomright",col=1:5,legend=1:5,lty = 1)
+
+#plot(ABUND~AREA, col=grazefactor,data=birds,pch=as.numeric(grazefactor),cex=1.25,
+#     xlim=c(0,150))
+#legend("bottomright",col=1:5,legend=1:5,pch=1:5)
+
+```
+
+Q8. Write the equation for each parameter in terms of the $\beta$   
+    $\beta_0$ = mean abundance (dash-dot line)   
+    $\beta_1$ = 
 
 
 ```{r}
