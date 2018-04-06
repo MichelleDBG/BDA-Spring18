@@ -1,9 +1,10 @@
 ---
 title: "Lab 9 - ANOVA tables"
 output:
-  word_document: default
-  pdf_document: default
+  html_document: default
   html_notebook: default
+  pdf_document: default
+  word_document: default
 ---
 
 In this lab, we'll work on creating more complex design matrices, interpreting coefficient outputs, and conducting ANOVA tests. The data used in this lab are provided in Quinn and Kough (2002) and were accessed from https://qkstats.com/data-files/.
@@ -46,8 +47,8 @@ anova(fit.hall)
 ```
 
 Q4. Interpret the p-value. What does it tell us about our model?   
-    The *p-value* for the linear model tells us that given the F distribution on 5 and 23 degrees of freedom, we have a probability of 7.1e^-13 of seeing that F ratio (a redution in residuals around the group means versus a grand mean). The p-value gives the chance of an F-statistic of 66.01 or larger if the experiment was repeated infinite times. The ANOVA breaks the p-values into which grouping reduces the residual sum of squares. The interaction factor, treatment at each time step, is signfiant. There is a difference between control and nutrient and that effect changes at each time step. It does not make sense to then interpret the difference between all control groups vs. nutrient groups nor does it make sense to interpret the difference of means at each time step when there is evidence that the interaction term best describes the data. 
-    **if they didnt' matter, would be surprising that the p-value is so low, the reduction of residuals and effect size is by chance. or doesn't matter... departure from what we'd expect given the data.** if really no signal from a grouping, then should be surprised that got such a low p-value. p-value is comparing to the null being that the grand mean is best way to explain/have lowest residuals. If main effects are also with interaction effect, then telling about a main effect is sloppy, there's more information when don't just talk about the main effects, there's something else that might be driving why different among groups (the interaction effect) 
+    The *p-value* for the linear model tells us that given the F distribution conditioned on 5 and 23 degrees of freedom, we have a probability of 7.1e^-13 of seeing that F ratio (a redution in residuals around the group means versus a grand mean). The p-value gives the chance of an F-statistic of 66.01 or larger if the experiment was repeated infinite times. The ANOVA breaks the p-values into which grouping reduces the residual sum of squares. The interaction factor, treatment at each time step, would be surprising if the null was true, that there was no difference among time steps for the addition of nutrients. There is a difference between control and nutrient and that effect changes at each time step. It does not make sense to then interpret the difference between all control groups vs. nutrient groups nor does it make sense to interpret the difference of means at each time step when there is evidence that the interaction term best describes the data. 
+ <!-- if really no signal from a grouping, then should be surprised that got such a low p-value. p-value is comparing to the null being that the grand mean is best way to explain/have lowest residuals. If main effects are also with interaction effect, then telling about a main effect is sloppy, there's more information when don't just talk about the main effects, there's something else that might be driving why different among groups (the interaction effect) F-statistic conditioned on 2 and 23 degrees of freedom.  -->
 
 
 Q5. You have a supervisor that wants to know about treatment effects. What do you tell them? What is the effect of increased nutrients on microinvertebrate communities?   
@@ -62,9 +63,7 @@ cont6 <- fit.hall$coefficients[1]+fit.hall$coefficients[4]
 nut6 <- fit.hall$coefficients[1]+fit.hall$coefficients[4]+fit.hall$coefficients[2]+fit.hall$coefficients[6]
 
 nut4-cont4
-(nut4-cont4)*1.96
 nut6-cont6
-
 
 ```
    
@@ -87,28 +86,61 @@ Q6. How many parameters are we estimating?
 
 Q7. Create the design matrix by writing one row for each parameter included in the model. 
 ```{r}
-modelout <- tapply(birds$AREA,birds$GRAZE,mean)
-model.matrix(~modelout*factor(unique(birds$GRAZE)))
+#modelout <- tapply(birds$AREA,birds$GRAZE,mean)
+#model.matrix(~signif(modelout,2)*factor(unique(birds$GRAZE))) #order is not 1:5
+#model.matrix(~c(1:5)*factor(c(1:5))) 
+model.matrix(~rep(1,5)*factor(c(1:5)))
 grazefactor <- as.factor(birds$GRAZE)
+```
 
+```{r, eval=FALSE}
 plot(ABUND~log(AREA), col=grazefactor, data=birds)
 abline(lm(ABUND~log(AREA), data=birds[birds$GRAZE==1,]), col=1)
 abline(lm(ABUND~log(AREA), data=birds[birds$GRAZE==2,]), col=2)
 abline(lm(ABUND~log(AREA), data=birds[birds$GRAZE==3,]), col=3)
 abline(lm(ABUND~log(AREA), data=birds[birds$GRAZE==4,]), col=4)
 abline(lm(ABUND~log(AREA), data=birds[birds$GRAZE==5,]), col=5)
-abline(h=mean(birds$ABUND), lty=4)
+abline(h=mean(birds$ABUND), lty=4, lwd=2)
+abline(lm(ABUND~log(AREA), data=birds), lty=5, lwd=2)
 legend("bottomright",col=1:5,legend=1:5,lty = 1)
-
-#plot(ABUND~AREA, col=grazefactor,data=birds,pch=as.numeric(grazefactor),cex=1.25,
-#     xlim=c(0,150))
-#legend("bottomright",col=1:5,legend=1:5,pch=1:5)
-
 ```
 
-Q8. Write the equation for each parameter in terms of the $\beta$   
-    $\beta_0$ = mean abundance (dash-dot line)   
-    $\beta_1$ = 
+To see the intercepts and slopes around zero, ignore the outliers
+```{r}
+plot(ABUND~AREA, col=grazefactor, data=birds, xlim=c(0,10), ylim=c(0,39))
+abline(lm(ABUND~AREA, data=birds[birds$GRAZE==1,]), col=1)
+abline(lm(ABUND~AREA, data=birds[birds$GRAZE==2,]), col=2)
+abline(lm(ABUND~AREA, data=birds[birds$GRAZE==3,]), col=3)
+abline(lm(ABUND~AREA, data=birds[birds$GRAZE==4,]), col=4)
+abline(lm(ABUND~AREA, data=birds[birds$GRAZE==5,]), col=5)
+#abline(h=mean(birds$ABUND), lty=4, lwd=2)
+#abline(lm(ABUND~AREA, data=birds), lty=5, lwd=2)
+abline(v=0, col="yellow")
+legend("bottomright",col=1:5,legend=1:5,lty = 1)
+
+summary(fit.loyn)
+```
+
+Q8. Write the equation for each parameter in terms of the $\beta$    
+   
+  For graze level 1:    
+    $\beta_0$ = intercept of abundance dependent on area for sites with low grazing (1: black)   
+    $\beta_1$ = the slope of the line for how abundance changes as area incraeses, y = 0.002*x + 28.13  i.e. y = $\beta_1$*x + $\beta_0$    
+  Main effects, Offsets of intercept:    
+    $\beta_2$ = the offset of the intercept for Graze=2; y = 0.002*x + 28.13+(-10.5) for the line of abundance by area for graze level 2 (red) 
+                y = $\beta_1$*x + $\beta_0$+$\beta_2$    
+    $\beta_3$:  Intercept offset for graze level 3 (green) y = $\beta_1$*x + $\beta_0$+$\beta_3$    
+    $\beta_4$:  Intercept offset for graze level 4 (purple) y = $\beta_1$*x + $\beta_0$+$\beta_4$    
+    $\beta_5$:  y = $\beta_1$*x + $\beta_0$+$\beta_5$ for graze level 5 (light blue)    
+  Interaction effects, offsets of slope:     
+    $\beta_6$: Change in slope over area for grazing level 2 is 0.19, 
+                y = ($\beta_1$+$\beta_6$)*x + $\beta_0$+$\beta_2$    
+    $\beta_7$: the change in slope for graze level 3 is 0.38   
+                y = ($\beta_1$+$\beta_7$)*x + $\beta_0$+$\beta_3$     
+    $\beta_8$: Change in slope over area for grazing level 4 is 1.3,    
+                y = ($\beta_1$+$\beta_8$)*x + $\beta_0$+$\beta_4$    
+    $\beta_9$: the change in slope for graze level 5 is 0.46       
+                y = ($\beta_1$+$\beta_9$)*x + $\beta_0$+$\beta_5$      
 
 
 ```{r}
@@ -117,19 +149,24 @@ summary(fit.loyn)
 anova(fit.loyn)
 ```
 
-Q9. Interpret the p-value.
+Q9. Interpret the p-value.    
+      If we were to repeat this exeriment an infinite number of times, we'd have a probability of 5.6e^-5 of seeing an F statistic of 8.0 or greater (conditioned on 4 and 46 degrees of freedom; pers. comm Liam C.). 
 
 
-Q10. Interpret the coefficients. 
+Q10. Interpret the coefficients.   
+      Starting with the interaction effects, all but graze level 5 are surprising if the null (no change in abundance with area or grazing level) were true. For grazing level 5 there is not an effect of area on abundance but a surprising decline of -24 abundance at graze level 5. For grazing levels 2, 3, and 4, there is a surprising decrease in abundance as grazing level increases and increase in abundance as area increases. Becauses our model sets graze level 1 as the base level, we cannot interpret the interaction of area and grazing level 1.  
 
 
-Q11. Describe how the influence of grazing changes with patch size. 
+Q11. Describe how the influence of grazing changes with patch size.     
+      For all but the highest level of grazing, there is an increase in abundance as patch size increases. As grazing levels increase from 1 to 5, the abundance is reduced and for grazing levels 2 through 4, abundance increases with increasing patch size but at the highest and lowest levels of grazing, abundance does not change with patch size.  
 
 
 Q12. Use the function interaction.plot to show how the influence of area changes depending on grazing level. Hint: Abundance will go on the y-axis, area on x-axis, and you'll have a trace for the different levels of grazing. Use the following data set:
 
 ```{r}
 modified.data <- data.frame(GRAZE = birds$GRAZE,
-AREA = seq(min(birds$AREA), 100, length.out = 2))
+                            AREA = seq(min(birds$AREA), 100, length.out = 2))
 predicted.values <- predict(fit.loyn, newdata = modified.data)
+
+interaction.plot(x.factor =  modified.data$AREA, response = predicted.values, trace.factor = modified.data$GRAZE, trace.label = "Grazing level")
 ```
