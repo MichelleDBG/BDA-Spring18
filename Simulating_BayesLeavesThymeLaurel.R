@@ -1,3 +1,11 @@
+library(R2jags)
+library(lme4)
+library(AICcmodavg)
+library(lattice)
+source("plotPost.R")
+source("HDIofMCMC.R")
+
+
 set.seed(10)
 
 #Make up known parameters
@@ -37,9 +45,9 @@ B5 <- 0.55 # fruit increases survival
 
 # site measurements, x
 B6 <- 0.4 #more moisture means more survival
-B7 <- 0.9 #more moisure
+B7 <- 0.9 #more moisure, bigger slope change than the first moisture one
 B8 <- -0.5 #hotter bad
-####### ignore above
+
 
 #Data structure to match different lengths of indexing
 Q <- sort(sample(c(1,2,5,15,19,26), size=1000, replace=TRUE)) # sort to allow random number of appropraite plot repeats (individuals: i) for the right plots (g) per site (Q)

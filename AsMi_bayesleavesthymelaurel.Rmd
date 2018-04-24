@@ -5,6 +5,362 @@ date: "April 12, 2018"
 output: html_document
 ---
 
+
+```{r}
+library(R2jags)
+require(lme4)
+#install.packages('Rcpp')
+library(Rcpp)
+library(AICcmodavg)
+library(lattice)
+HDIofMCMC = function( sampleVec , credMass=0.95 ) {
+  # Computes highest density interval from a sample of representative values,
+  #   estimated as shortest credible interval.
+  # Arguments:
+  #   sampleVec
+  #     is a vector of representative values from a probability distribution.
+  #   credMass
+  #     is a scalar between 0 and 1, indicating the mass within the credible
+  #     interval that is to be estimated.
+  # Value:
+  #   HDIlim is a vector containing the limits of the HDI
+  sortedPts = sort( sampleVec )
+  ciIdxInc = ceiling( credMass * length( sortedPts ) )
+  nCIs = length( sortedPts ) - ciIdxInc
+  ciWidth = rep( 0 , nCIs )
+  for ( i in 1:nCIs ) {
+    ciWidth[ i ] = sortedPts[ i + ciIdxInc ] - sortedPts[ i ]
+  }
+  HDImin = sortedPts[ which.min( ciWidth ) ]
+  HDImax = sortedPts[ which.min( ciWidth ) + ciIdxInc ]
+  HDIlim = c( HDImin , HDImax )
+  return( HDIlim )
+}
+plotPost = function( paramSampleVec , cenTend=c("mode","median","mean")[1] , 
+                     compVal=NULL, ROPE=NULL, credMass=0.95, HDItextPlace=0.7, 
+                     xlab=NULL , xlim=NULL , yaxt=NULL , ylab=NULL , 
+                     main=NULL , cex=NULL , cex.lab=NULL ,
+                     col=NULL , border=NULL , showCurve=FALSE , breaks=NULL , 
+                     ... ) {
+  # Override defaults of hist function, if not specified by user:
+  # (additional arguments "..." are passed to the hist function)
+  if ( is.null(xlab) ) xlab="Param. Val."
+  if ( is.null(cex.lab) ) cex.lab=1.5
+  if ( is.null(cex) ) cex=1.4
+  if ( is.null(xlim) ) xlim=range( c( compVal , ROPE , paramSampleVec ) )
+  if ( is.null(main) ) main=""
+  if ( is.null(yaxt) ) yaxt="n"
+  if ( is.null(ylab) ) ylab=""
+  if ( is.null(col) ) col="skyblue"
+  if ( is.null(border) ) border="white"
+  
+  # convert coda object to matrix:
+  if ( class(paramSampleVec) == "mcmc.list" ) {
+    paramSampleVec = as.matrix(paramSampleVec)
+  }
+  
+  summaryColNames = c("ESS","mean","median","mode",
+                      "hdiMass","hdiLow","hdiHigh",
+                      "compVal","pGtCompVal",
+                      "ROPElow","ROPEhigh","pLtROPE","pInROPE","pGtROPE")
+  postSummary = matrix( NA , nrow=1 , ncol=length(summaryColNames) , 
+                        dimnames=list( c( xlab ) , summaryColNames ) )
+  
+  # require(coda) # for effectiveSize function
+  postSummary[,"ESS"] = effectiveSize(paramSampleVec)
+  
+  postSummary[,"mean"] = mean(paramSampleVec)
+  postSummary[,"median"] = median(paramSampleVec)
+  mcmcDensity = density(paramSampleVec)
+  postSummary[,"mode"] = mcmcDensity$x[which.max(mcmcDensity$y)]
+  
+  HDI = HDIofMCMC( paramSampleVec , credMass )
+  postSummary[,"hdiMass"]=credMass
+  postSummary[,"hdiLow"]=HDI[1]
+  postSummary[,"hdiHigh"]=HDI[2]
+  
+  # Plot histogram.
+  cvCol = "darkgreen"
+  ropeCol = "darkred"
+  if ( is.null(breaks) ) {
+    if ( max(paramSampleVec) > min(paramSampleVec) ) {
+      breaks = c( seq( from=min(paramSampleVec) , to=max(paramSampleVec) ,
+                       by=(HDI[2]-HDI[1])/18 ) , max(paramSampleVec) )
+    } else {
+      breaks=c(min(paramSampleVec)-1.0E-6,max(paramSampleVec)+1.0E-6)
+      border="skyblue"
+    }
+  }
+  if ( !showCurve ) {
+    par(xpd=NA)
+    histinfo = hist( paramSampleVec , xlab=xlab , yaxt=yaxt , ylab=ylab ,
+                     freq=F , border=border , col=col ,
+                     xlim=xlim , main=main , cex=cex , cex.lab=cex.lab ,
+                     breaks=breaks , ... )
+  }
+  if ( showCurve ) {
+    par(xpd=NA)
+    histinfo = hist( paramSampleVec , plot=F )
+    densCurve = density( paramSampleVec , adjust=2 )
+    plot( densCurve$x , densCurve$y , type="l" , lwd=5 , col=col , bty="n" ,
+          xlim=xlim , xlab=xlab , yaxt=yaxt , ylab=ylab ,
+          main=main , cex=cex , cex.lab=cex.lab , ... )
+  }
+  cenTendHt = 0.9*max(histinfo$density)
+  cvHt = 0.7*max(histinfo$density)
+  ROPEtextHt = 0.55*max(histinfo$density)
+  # Display central tendency:
+  mn = mean(paramSampleVec)
+  med = median(paramSampleVec)
+  mcmcDensity = density(paramSampleVec)
+  mo = mcmcDensity$x[which.max(mcmcDensity$y)]
+  if ( cenTend=="mode" ){ 
+    text( mo , cenTendHt ,
+          bquote(mode==.(signif(mo,3))) , adj=c(.5,0) , cex=cex )
+  }
+  if ( cenTend=="median" ){ 
+    text( med , cenTendHt ,
+          bquote(median==.(signif(med,3))) , adj=c(.5,0) , cex=cex , col=cvCol )
+  }
+  if ( cenTend=="mean" ){ 
+    text( mn , cenTendHt ,
+          bquote(mean==.(signif(mn,3))) , adj=c(.5,0) , cex=cex )
+  }
+  # Display the comparison value.
+  if ( !is.null( compVal ) ) {
+    pGtCompVal = sum( paramSampleVec > compVal ) / length( paramSampleVec ) 
+    pLtCompVal = 1 - pGtCompVal
+    lines( c(compVal,compVal) , c(0.96*cvHt,0) , 
+           lty="dotted" , lwd=2 , col=cvCol )
+    text( compVal , cvHt ,
+          bquote( .(round(100*pLtCompVal,1)) * "% < " *
+                    .(signif(compVal,3)) * " < " * 
+                    .(round(100*pGtCompVal,1)) * "%" ) ,
+          adj=c(pLtCompVal,0) , cex=0.8*cex , col=cvCol )
+    postSummary[,"compVal"] = compVal
+    postSummary[,"pGtCompVal"] = pGtCompVal
+  }
+  # Display the ROPE.
+  if ( !is.null( ROPE ) ) {
+    pInROPE = ( sum( paramSampleVec > ROPE[1] & paramSampleVec < ROPE[2] )
+                / length( paramSampleVec ) )
+    pGtROPE = ( sum( paramSampleVec >= ROPE[2] ) / length( paramSampleVec ) )
+    pLtROPE = ( sum( paramSampleVec <= ROPE[1] ) / length( paramSampleVec ) )
+    lines( c(ROPE[1],ROPE[1]) , c(0.96*ROPEtextHt,0) , lty="dotted" , lwd=2 ,
+           col=ropeCol )
+    lines( c(ROPE[2],ROPE[2]) , c(0.96*ROPEtextHt,0) , lty="dotted" , lwd=2 ,
+           col=ropeCol)
+    text( mean(ROPE) , ROPEtextHt ,
+          bquote( .(round(100*pLtROPE,1)) * "% < " * .(ROPE[1]) * " < " * 
+                    .(round(100*pInROPE,1)) * "% < " * .(ROPE[2]) * " < " * 
+                    .(round(100*pGtROPE,1)) * "%" ) ,
+          adj=c(pLtROPE+.5*pInROPE,0) , cex=1 , col=ropeCol )
+    
+    postSummary[,"ROPElow"]=ROPE[1] 
+    postSummary[,"ROPEhigh"]=ROPE[2] 
+    postSummary[,"pLtROPE"]=pLtROPE
+    postSummary[,"pInROPE"]=pInROPE
+    postSummary[,"pGtROPE"]=pGtROPE
+  }
+  # Display the HDI.
+  lines( HDI , c(0,0) , lwd=4 , lend=1 )
+  text( mean(HDI) , 0 , bquote(.(100*credMass) * "% HDI" ) ,
+        adj=c(.5,-1.7) , cex=cex )
+  text( HDI[1] , 0 , bquote(.(signif(HDI[1],3))) ,
+        adj=c(HDItextPlace,-0.5) , cex=cex )
+  text( HDI[2] , 0 , bquote(.(signif(HDI[2],3))) ,
+        adj=c(1.0-HDItextPlace,-0.5) , cex=cex )
+  par(xpd=F)
+  #
+  return( postSummary )
+}
+
+logit2prob <- function(logit){
+  odds <- exp(logit)
+  prob <- odds / (1 + odds)
+  return(prob)
+}
+
+```
+
+
+#Set up long-form data   
+variable indiviuals (1 or 0), per variable plots (g) per site (Q) and variable years (t) per plot.     
+```{r}
+#Climate at the Q level, covariables at the i level. 
+siteN <- c(6,5,5,4,5,5)
+B0 <- 3 # grand mean
+ 
+sigmai <- 0.05 # variance among individuals
+sigmaQ <- .3 # variance in mean among sites, spatial differences 
+sigmag <- .1 # variance around mean associated with plots, more similar 
+sigmaf <- .05 # variance around plots with factor or without
+
+B1_plot <- c(seq(-.5,.5,length.out = 30))
+B1_site <- c(seq(-1,1,length.out = 6))
+B_environ <- c(0.7,5)
+B_w <- c(3,-0.5)
+B_cofactor <- c(-3,0.1)
+```
+
+Not beta! doesn't need to be [0-1]    
+
+      B1 <- rbeta(6, (B0^2 - B0^3 - B0*sigmaQ^2)/sigmaQ^2,     # true values of Site means
+                  (B0-2*B0^2+B0^3-sigmaQ^2+B0*sigmaQ^2)/sigmaQ^2) #between 0 and 1
+      B2 <- do.call(c,lapply(1:6, function(b){
+        rbeta(siteN[b],(B1[b]^2 - B1[b]^3 - B1[b]*sigmag^2)/sigmag^2, # true values of plot means
+              (B1[b]-2*B1[b]^2+B1[b]^3-sigmag^2+B1[b]*sigmag^2)/sigmag^2)})) # with true variance around each site
+
+# plot factors
+```{r}
+B0_plotfence <- 0.25 #variance around mean for plots with vs. without fencing (or burn treatment), offset for fenced
+```
+
+# individual measurements, w
+```{r}
+B4 <- 0.3 # slope for length increases survival?
+B5 <- 0.55 # fruit increases survival
+```
+
+# site measurements, x
+```{r}
+B6 <- 0.4 #more moisture means more survival
+B7 <- 0.9 #more moisure, bigger slope change than the first moisture one
+B8 <- -0.5 #hotter bad
+```
+
+#Data structure to match different lengths of indexing   
+```{r}
+Q <- sort(sample(c(1,2,5,15,19,26), size=1000, replace=TRUE)) # sort to allow random number of appropraite plot repeats (individuals: i) for the right plots (g) per site (Q)
+#Variable number of plots per site, 30 total plots
+g <- c(sample(1:6,size=table(Q)[1], replace=TRUE),
+       sample(c(1:5)+6,size=table(Q)[2], replace=TRUE),
+       sample(c(1:5)+11,size=table(Q)[3], replace=TRUE),
+       sample(c(1:4)+16,size=table(Q)[4], replace=TRUE),
+       sample(c(1:5)+20,size=table(Q)[5], replace=TRUE),
+       sample(c(1:5)+25,size=table(Q)[6], replace=TRUE))
+t <- do.call(c,lapply(1:30, function(plot){
+  if(plot<15){
+    sample(2000:2007,size=table(g)[plot], replace=TRUE)
+  } else {
+    sample(1999:2008,size=table(g)[plot], replace=TRUE)
+  }}) ) #subset of years, different lengths of years
+
+#Individual measurements [i]
+w1 <- runif(1000, 0, 90) #length of longest stem, or zero when y is 0
+w2 <- rnorm(1000,200,50) # number of fruit per individual, zero when length < 15, multiplied by survival vector will make 0 have 0 length and 1 have simluated random length
+
+#create climate varaibles, Site measurements [Q]
+gQt <- data.frame(Q,g,t)[with(data.frame(Q,g,t), order(Q,g,t)),]
+climate.sim <- data.frame(unique(gQt), x1 = rnorm(nrow(unique(gQt)),100,5), #precip december
+                          x2 = rnorm(nrow(unique(gQt)), 80,2),  #precip November
+                          x3 = rnorm(nrow(unique(gQt)), 30, 3)) #max temp July
+
+#plot level factor fenced or not (or burn treatment) [g]
+G1 <- data.frame(g= unique(g),w.g1 = rbinom(30,1,0.5))
+
+data.df <- data.frame(g,Q,t,w1,w2)
+data.df <- merge(data.df,climate.sim,by=c("g","Q","t")) #merge with climate per site per year
+data.df <- merge(data.df, G1, by="g") # merge with plot level factor (y/n fencing)
+
+#How to simulate individual covariates based on simulated survival data??
+data.df$w2[data.df$w1 < 15] <- 0 #can't flower if smaller than 15cm
+hist(data.df$w1)
+
+data.df <- data.df[with(data.df, order(Q,g,t)),] 
+
+nsite <- length(table(data.df$Q)) #number of site
+nplot <- aggregate(g~Q,data=data.df, function(x) length(unique(x)))$g #plots per site
+nyear <- aggregate(t~g,data=data.df, function(x) length(unique(x)))$t #years per plot
+#nobs <- aggregate(g~t+Q, data=data.df, function(x) length(x))
+table(data.df$g,data.df$Q)
+sum(table(data.df$g,data.df$Q))
+```
+
+###same number per each
+# 5 plots per site
+# 34 indivudals per plot
+# 1020 indiviudals total, 34 per plot
+
+
+y_site <- unlist(rep(lapply(1:nsite, function(Q) rnorm(1,B0 + B1_site[Q],sigmaQ)), each=5)) #
+y_plot <- unlist(rep(lapply(1:30, function(g){rnorm(1, y_site[g]+B1_plot[g], sigmag)}), each=34))
+y_plot_prob <- logit2prob(y_plot)
+y <- unlist(lapply(1:1020, function(i){ rbinom(1,1,logit2prob(y_plot[i]))})) 
+
+
+
+
+
+
+# f(survival) ~ grand mean from + site means from  + plot means + difference in treatment of plots +
+#               w covariates of individuals + x covariates of sites
+mu <- B0 + (B1*data.df$g) + (B2*data.df$Q) + (B3*data.df$w.g1) + 
+  B4*data.df$w1 + B4*data.df$w2 +   #w vector  
+  B5*data.df$x1 + B6*data.df$x2 + B7*data.df$x3  #x vector
+#treatment of fence changes snow pack so might interact with slope of precip
+
+y <- do.call(c,lapply(1:30, function(x) {
+  rbinom(length(data.df$y[data.df$g==x]),1,1-(sigmag^2/(B0+B2[x])))
+}))
+
+plot(mu, y)
+plot(y~g, data = data.df)
+oddstest <- data.frame(y.1 = y,mu = mu, data.df)
+
+survival <- tapply(oddstest$y.1,oddstest$Q,function(x) log((sum(x)/length(x))/
+                                                         (1-(sum(x)/length(x)))) )
+#Odds ratio
+plot(survival)
+
+str(data.df)
+
+
+
+
+#Defining the model
+prevalence <- function(){
+  # Likelihood:
+  for(k in 1:nsite){
+    for(i in 1:nplot[k]){ # Within each site k, the number of plots is denoted by the vector nplot[k]
+      for(t in 1:nyear[k,i]){ # Within each plot i of site k, the number years it is surveyed is denoted by nyear[k,i]
+        for(j in 1:nobs[k,i,t]){ # The number of observations at plot i in year t is denoted by nobs[k,i,t]
+          y[k,i,j,t] ~ dbern(1-(1-pi[k,i,t])^n[k,i,j,t])
+        }
+        pi[k,i,t] <- ilogit(beta0[k,i] + beta1*x1[k,i,t] + beta2*x2[k,i,t])
+      }
+      beta0[k,i] ~ dnorm(alpha[k], 1/sigma[k]^2)
+    }
+    alpha[k] ~ dnorm(mu, 1/sigma0^2)
+  }
+  
+  # Priors:
+  beta1 ~ dnorm(0, .01)
+  beta2 ~ dnorm(0, .01)
+  mu ~ dnorm(0, .01)
+  sigma0 ~ dunif(0,10)
+  for(k in 1:nsite){
+    sigma[k] ~ dunif(0,10)
+  }
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#Actual data
 ```{r}
 load("P:/My Documents/BDA_Spring2018/AsMi_subset.Rda")
 asmi.climate<-read.csv("P:/hackathon/GitPVA/datasets/asmi.c.csv")
@@ -268,7 +624,6 @@ asmi.raw$fence <- factor(asmi.raw$fence)
 
 
 ```{r}
-library(R2jags)
 #library("reshape2")
 
 head(asmi.climate)
