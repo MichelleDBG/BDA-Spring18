@@ -1,0 +1,98 @@
+x vector---
+title: "Lab 10- Random Effects"
+output:
+  pdf_document: default
+  html_notebook: default
+  html_document: default
+---
+
+1.  For each member in the group, write an example of confounding in an experiment characteristic of your field. Your answer should consist each group member's example.
+Michelle and Liam: Plants - Preciciptation and temp influence - soil type across sites is variable and influences water holding capacity and growth/survival of individual plants.      
+Bees: precip and temp when measuring bee abundance and diversity the precip and temp influence both the number of flowers/pollen avaliable and the patterns of foraging of the bees. 
+
+2.  Explain how this represents collinearity.    
+In Michelle's example soil represents collinearity because it changes the water holding capcity and availabile soil mositure regardless of the amount of precipitation but preciptiation increases will increase density of above ground growth of the pea plants. Density of growth of pea plants will also be influenced by soil type since soil type will change the associated microbiota of the soil - preciptiation is a proxy of water availablity and soil type   
+In Liam's example precipitaiton and temperature will directly change foraging behavior    
+More precip = fewer bees foraging regardless of floral avaliablility, more precip = more floral avaliablilty and more foraging. 
+
+
+The remaining questions will consider the sleepstudy data presented during the beginning of lab. Let's first load and take a look at the data.
+
+```{r, message = F}
+#library(lme4)
+#install.packages("lme4")
+require(lme4)
+library(lattice)
+
+data(sleepstudy)
+
+str(sleepstudy)
+
+plot(sleepstudy$Days, sleepstudy$Reaction, 
+     ylab = "Reaction time",
+     xlab = "Days")
+```
+
+Let's now look at the trends across each individual involved in the study.
+
+```{r}
+xyplot(Reaction ~ Days | Subject, sleepstudy, 
+       type = c("g","p","r"),
+       index = function(x,y) coef(lm(y ~ x))[1],
+       xlab = "Days of sleep deprivation",
+       ylab = "Average reaction time (ms)", aspect = "xy")
+```
+
+
+3.  Using the sleepstudy data, compute the variance components for a mixed effect model with random intercepts. Then compute the variance components for a mixed effect model with random slopes and intercepts.    **Need to calculate the amount of variation out of the total variation!!** proportion described by interept, variation in the intercept variance in reaction time across subjects
+```{r}
+lmr2 <- lmer(Reaction ~ (1|Subject), sleepstudy) #not days, days is slope
+summary(lmr2) # Variance = 1278 (SD 29.91)
+
+lmr1 <- lmer(Reaction ~ (Days|Subject),sleepstudy) # want to be generalized to other people so Subject should be random effect, not a parameter for each subject. to get varability on intercept and then variablilty of slope conditioned on subject. 
+summary(lmr1) #Variance intercept: 651.6 (SD 25); slope: 142.2 (SD 11.93)
+```
+   - The variance for the mixed effect model with random intercepts is Subject  (Intercept) 1278 (SD 35.75). 
+
+```{r, eval=FALSE}
+plot(Reaction~Days, data=sleepstudy)
+abline(h=mean(sleepstudy$Reaction))
+
+xyplot(Reaction ~ Days, sleepstudy, 
+       type = c("g","p","r"),
+       index = function(x,y) coef(lm(y ~ x))[1],
+       xlab = "Days of sleep deprivation",
+       ylab = "Average reaction time (ms)", aspect = "xy")
+
+mean(sleepstudy$Reaction) # the fixed effect with random intercept model grand mean of reaction time accross subjects and days. 
+mean(aggregate(Reaction~Days, sleepstudy, mean)$Reaction)
+
+
+lmer(Reaction ~ (1|Subject), sleepstudy)
+#The fixed effect is the grand mean of reaction times. The random effects residuals are the group means around the grand mean?
+plot(Reaction~Subject, data=sleepstudy) #subject tags are factored
+abline(h=mean(sleepstudy$Reaction))
+
+
+#Random slope and intercept
+lmer(Reaction ~ (Days|Subject), sleepstudy)
+```
+
+
+
+4.  Describe the difference in variance components between the two models in question 3. Do this by talking about the structure of the fixed effects and the structure of the random effects.    
+   The fixed effects variance component in the first model (~(1|Subject)) is the grand mean of response time over days and subjects, the random effects variance is describing the variation around response time accorss all subjects regardless of days. The first  The fixed effects variance component in the second model (~(Days|Subject)) is the  
+   
+
+
+
+
+5.  Create residual vs. fitted plots for 1) the random intercept random slope model and 2) a fixed intercept fixed slope model with an interaction term. Compare them and explain why they might look similar or dissimilar.   
+```{r}
+
+plot(lmr2) #random intercept
+plot(lmr1) #random slope and intercept
+plot(lm(Reaction~(Days+Subject)^2, data=sleepstudy))
+```
+
+

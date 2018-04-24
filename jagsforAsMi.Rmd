@@ -1,0 +1,263 @@
+---
+title: "RJags_indexing"
+author: "Michelle DePrenger-Levin"
+date: "April 16, 2018"
+output: html_document
+---
+
+```{r}
+library(R2jags)
+
+asmi.climate<-read.csv("P:/hackathon/GitPVA/datasets/asmi.c.csv")
+currentyr <- as.numeric(format(as.Date(Sys.Date(),format="%Y-%m-%d"), "%Y")) -1
+rawdatapath <- paste("Q:/Research/All_Projects_by_Species/Astragalus SPECIES/Astragalus_microcymbus/Asmi_Excel/Yearly Summaries/", 
+                     currentyr,"_asmi/RawData_",
+                     currentyr, ".csv", collapse = '', sep = '')
+
+asmi.raw <- read.csv(path.expand(rawdatapath), na.strings = "na")
+
+# No longer adding climate data to the database
+asmi.raw <- asmi.raw[,grep(paste(c("Temp","Rain","Snow","Aug.Jul"),collapse="|"), names(asmi.raw),
+                           value = TRUE, invert = TRUE)]
+asmi.raw <- asmi.raw[asmi.raw$status != "",]
+asmi.raw$status <- factor(asmi.raw$status)
+#reset factors of browsing to eliminate " "
+asmi.raw$Browsing...Status[asmi.raw$Browsing...Status == "mammal"] <- "Mammal"
+asmi.raw$Browsing...Status <- factor(asmi.raw$Browsing...Status)
+
+#reset factors for fence
+asmi.raw$fence <- factor(asmi.raw$fence)
+
+```
+
+#Climate variable importance  
+```{r}
+climate.wide <- reshape(asmi.climate[,-8], 
+                        idvar= c("Plot","Site","Creek","Site.1","Prev12"), timevar="Month", 
+                        direction="wide")
+
+asmi.merge <- merge(asmi.raw, climate.wide, by.x = c("AsMi_plot_id","AsMi_site_id","year"), 
+                    by.y = c("Plot","Site","Prev12"))
+
+#for indexing, something like:
+# or if that doesn't work, sort first and then these will be sequential numbers
+plot610 <- which(asmi.merge$AsMi_plot_id==610) #over the length of that
+asmi.merge[plot610,]
+
+length.plots.indexing <- sapply(unique(asmi.merge$AsMi_plot_id), function(plot){
+  index <- which(asmi.merge$AsMi_plot_id == plot)
+  out <- c(min(index),max(index))
+  out
+})
+
+
+#test variable importance 
+```
+
+```{r Simulating data}
+set.seed(10)
+
+#Set up long-form data,variable indiviuals (1 or 0), per variable plots (g) per site (Q) and variable years (t) per plot. Climate at the Q level, covariables at the i level. 
+siteN <- c(6,5,5,4,5,5)
+#Data structure to match different lengths of indexing
+Q <- sort(sample(c(1,2,5,15,19,26), size=1000, replace=TRUE)) # sort to allow random number of appropraite plot repeats (individuals: i) for the right plots (g) per site (Q)
+#Variable number of plots per site, 30 total plots
+g <- c(sample(1:6,size=table(Q)[1], replace=TRUE),
+       sample(c(1:5)+6,size=table(Q)[2], replace=TRUE),
+       sample(c(1:5)+11,size=table(Q)[3], replace=TRUE),
+       sample(c(1:4)+16,size=table(Q)[4], replace=TRUE),
+       sample(c(1:5)+20,size=table(Q)[5], replace=TRUE),
+       sample(c(1:5)+25,size=table(Q)[6], replace=TRUE))
+t <- do.call(c,lapply(1:30, function(plot){
+  if(plot<15){
+    sample(2000:2007,size=table(g)[plot], replace=TRUE)
+  } else {
+    sample(1999:2008,size=table(g)[plot], replace=TRUE)
+  }}) ) #subset of years, different lengths of years
+#y <- sample(c(0,1), size=1000, replace = TRUE)
+w1 <- rlnorm(1000) #length of longest stem, or zero when y is 0
+w2 <- rnorm(1000,200,50) # number of fruit per individual, zero when length < 15
+
+G1 <- #plot level factor fenced or not (or burn treatment) 
+
+#create climate varaibles
+gQt <- data.frame(Q,g,t)[with(data.frame(Q,g,t), order(Q,g,t)),]
+climate.sim <- data.frame(unique(gQt), x1 = rnorm(nrow(unique(gQt)),100,5), #precip december
+                          x2 = rnorm(nrow(unique(gQt)), 80,2),  #precip November
+                          x3 = rnorm(nrow(unique(gQt)), 30, 3)) #max temp July
+climate.sim
+
+data.df <- data.frame(g,Q,t,w1,w2)
+data.df <- merge(data.df,climate.sim,by=c("g","Q","t"))
+#data.df$w1[data.df$y==0] <- 0 # can't have length if didn't emmerge
+data.df$w2[data.df$w1 < 15] <- 0 #can't flower if smaller than 15cm
+hist(data.df$w2)
+hist(data.df$w1)
+
+data.df <- data.df[with(data.df, order(Q,g,t)),] 
+
+#log(survival/(1-survival)) ~ B0 + B1*factor(g) + B2*factor(Q) + B3*w1 + B4*w2 + B5*x1 + B6*x2
+#intercept for survival of AsMi
+B0 <- 0.5 # grand mean
+sigmaQ <- .1 # variance in mean among sites 
+sigmag <- .3 # variance around mean associated with plots 
+B1 <- rbeta(6, (B0^2 - B0^3 - B0*sigmaQ^2)/sigmaQ^2,     # true values of Site means
+            (B0-2*B0^2+B0^3-sigmaQ^2+B0*sigmaQ^2)/sigmaQ^2) #between 0 and 1
+B2 <- do.call(c,lapply(1:6, function(b){
+  rbeta(siteN[b],(B1[b]^2 - B1[b]^3 - B1[b]*sigmag^2)/sigmag^2, # true values of plot means
+        (B1[b]-2*B1[b]^2+B1[b]^3-sigmag^2+B1[b]*sigmag^2)/sigmag^2)})) # with true variance around each site
+B3 <- 0.25 #variance around mean for plots with vs. without fencing (or burn treatment)
+
+
+B3 <- 3 # slope for length increases survival?
+B4 <- 5.5 # fruit increases survival
+B5 <- 4 #more moisture means more survival
+B6 <- 9 #more moisure
+B7 <- -5 #hotter bad
+
+mu <- B0 + B1*data.df$g + B2*data.df$Q + 
+  B3*data.df$w1 + B4*data.df$w2 + 
+  B5*data.df$x1 + B6*data.df$x2 + B7*data.df$x3
+sigma <- 5
+probi <- 0.675
+data.df$y <- rbinom(1000, size = 1, prob=probi) #should be 0 or 1
+
+survival <- tapply(data.df$y,data.df$g,function(x) log((sum(x)/length(x))/
+                                              (1-(sum(x)/length(x)))) )
+#Odds ratio
+plot(survival)
+```
+
+
+
+
+```{r}
+site <- rep(1:12, each = 40) # site ID
+
+plot <- rep(rep(1:10, each = 4), 12) # within-site plot ID
+
+obs <- rep(1:4, 120) # within-plot sample ID
+
+year <- rep(1:4, each = 480) # Year ID
+
+N <- length(year) # total number of samples
+
+n <- rpois(N, 5) # number of ticks collected during each observation
+
+# plot-level observations of covariates
+x1 <- rep( # outer repeats operation across four years
+  rep(rnorm(120), each = 4) # inner repeat each measurement at the plot level within a year
+  ,4) 
+
+x2 <- rep(
+  rep(rnorm(120), each = 4)
+  ,4)
+
+mu <- qlogis(0.05) # grand mean  ** change to dlogis # this should just be the value, suvival/(1-survial)
+sigma_0 <- 1 # variance around the mean associated with sites
+sigma_k <- runif(12, .2, .6) # variance around site-means associated with plots
+beta1 <- .7
+beta2 <- -.4
+
+alpha <- rep(rnorm(12, mu, sigma_0), each = 10) # draws to establish true values of site-level intercepts
+beta0 <- rep(rnorm(120, alpha, sigma_k), # draws establish true values of plot-level intercepts, 
+             each = 4, times = 4)        # repeated for each of four years
+
+#needs an rlogit with that equasion as mean, survival/(1-survival) : 
+
+pi_kit <- plogis(beta0 + beta1*x1 + beta2*x2)  # should be dlogis 
+piStar_kit <- 1 - (1-pi_kit)^n
+
+y <- rbinom(N, 1, prob = piStar_kit)
+
+dat <- data.frame(rep(site,4), rep(plot,4), rep(obs,4), year, y, n, x1, x2)
+colnames(dat)[1:3] <- c("site", 'plot', 'obs')
+```
+
+```{r GLMMs}
+### Modeling via GLMM:
+
+fm1 <- glmer(y ~ x1 + (1|site/plot), data = dat, family = 'binomial')
+fm2 <- glmer(y ~ x2 + (1|site/plot), data = dat, family = 'binomial')
+fm3 <- glmer(y ~ x1 + x2 + (1|site/plot), data = dat, family = 'binomial')
+fm4 <- glmer(y ~ x1 + x2 + n + (1|site/plot), data = dat, family = 'binomial')
+
+aictab(list(fm1, fm2, fm3, fm4))
+
+summary(fm1)
+summary(fm2)
+summary(fm3)
+summary(fm4)
+
+## This can be cool, but is time consuming:
+# fm4.profile <- profile(fm4)
+# xyplot(fm4.profile)
+```
+
+```{r JAGS prep}
+### format data into arrays for logical indexing:
+y <- xtabs(y ~ site + plot + obs + year, data = dat)
+n <- xtabs(n ~ site + plot + obs + year, data = dat)
+x1 <- xtabs(x1 ~ site + plot + year, data = dat)
+x2 <- xtabs(x2 ~ site + plot + year, data = dat)
+
+### Create data list:
+dataList <- list(
+  y = y,
+  x1 = x1,
+  x2 = x2,
+  nsite = dim(y)[1], #long form, need number of individuals per plot:g
+  nplot = dim(y)[2], # 
+  nobs = dim(y)[3],
+  nyear = dim(y)[4],
+  n = n
+)
+```
+
+```{r Defining the model}
+prevalence <- function(){
+  # Likelihood:
+  for(k in 1:nsite){
+    for(i in 1:nplot){
+      for(t in 1:nyear){
+        for(j in 1:nobs){
+          y[k,i,j,t] ~ dbern(1-(1-pi[k,i,t])^n[k,i,j,t])
+        }
+        pi[k,i,t] <- ilogit(beta0[k,i] + beta1*x1[k,i,t] + beta2*x2[k,i,t]) #error with bernoulli so maybe don't need error around the process? the variance is described by p : p*(1-p) like a Poisson model, dont' need variance. 
+      }
+      beta0[k,i] ~ dnorm(alpha[k], 1/sigma[k]^2)
+    }
+    alpha[k] ~ dnorm(mu, 1/sigma0^2)
+  }
+  
+  # Priors:
+  beta1 ~ dnorm(0, .01)
+  beta2 ~ dnorm(0, .01)
+  mu ~ dnorm(0, .01)
+  sigma0 ~ dgamma(100,100)
+  for(k in 1:nsite){
+    sigma[k] ~ dgamma(100,100)
+  }
+}
+```
+
+
+```{r JAGS prep}
+### format data into arrays for logical indexing:
+y <- xtabs(y ~ site + plot + obs + year, data = dat)
+n <- xtabs(n ~ site + plot + obs + year, data = dat)
+x1 <- xtabs(x1 ~ site + plot + year, data = dat)
+x2 <- xtabs(x2 ~ site + plot + year, data = dat)
+
+### Create data list:
+dataList <- list(
+  y = y,
+  x1 = x1,
+  x2 = x2,
+  nsite = dim(y)[1], #long form, need number of individuals per plot:g
+  nplot = dim(y)[2], # 
+  nobs = dim(y)[3],
+  nyear = dim(y)[4],
+  n = n
+)
+```

@@ -1,0 +1,343 @@
+---
+title: "AsMi_BayesLeaves_Thyme_Laurel"
+author: "Michelle DePrenger-Levin"
+date: "April 12, 2018"
+output: html_document
+---
+
+```{r}
+load("P:/My Documents/BDA_Spring2018/AsMi_subset.Rda")
+asmi.climate<-read.csv("P:/hackathon/GitPVA/datasets/asmi.c.csv")
+#load("AsMi_subset.Rda") #asmi.toshare
+head(asmi.toshare)
+```
+
+$\beta_0$    
+y^G^~i,Q,t+1~ 
+
+#Climate variable importance  
+```{r}
+#asmi.climate <- read.csv("asmi.c.csv")
+head(asmi.climate)
+
+asmi.merge <- merge(asmi.toshare, asmi.climate, by.x = "AsMi_plot_id", by.y = "Plot")
+head(asmi.merge)
+
+#test variable importance 
+```
+
+
+#StagePVA    
+I'd like to change this from having dormancy as a stage (and then allowing some death to dormants) to detectability
+```{r}
+StagePVA <- function(df,dormancy = 1){
+  
+  years <- sort(unique(df$year)) #start years of each transition
+  
+  # Create a list to hold output 
+  names <- c("plot.matrix",   #Stage PVA per plot
+             "pro.matrix","fenced.pro.matirx","notfenced.pro.matrix",    #Stage PVA overall
+             "Site", "fenced", "notfenced") #Stage PVA per site: fenced vs. not fenced plots split per site
+  SiteMatrix <- vector("list", length(names))
+  names(SiteMatrix) <- names
+  
+  require(popbio)
+  
+  # Individuals that are new at the current census are considered seedlings, some are reproductive
+  # These measure the fertility (fruit output) of seedlings
+  # "Seedlings" that are reproductive came from seed at an earlier time, won't be reproductive 
+  # if they were a seedling that year - should add to seed stage somehow....
+  
+  ## 1
+  # overall
+  seedlingsfert <- c()
+  fencedseedlingsfert <- c()
+  notfencedseedlingsfert <- c()
+  
+  # projection matrices of of class specific vital rates
+  pro.matrix <- vector("list", length(years))
+  names(pro.matrix) <- years
+  fenced.pro.matrix <- vector("list", length(years))
+  names(fenced.pro.matrix) <- years
+  notfenced.pro.matrix <- vector("list", length(years))
+  names(notfenced.pro.matrix) <- years
+  
+  ## Fencing
+  for(i in years){
+    
+    # Not split by site, overall
+    fert <- subset(df, x == i)
+    fencedfert <- subset(df, x == i & df$fenced == "y")
+    notfencedfert <- subset(df, x == i & df$fenced == "n")		
+    
+    # Pre-breeding census
+    # ?projection.matrix uses a column with a stage name as a fertility measure per plant 
+    # fruit production per individual as a percent of the total production that year. Time t
+    # this times the number of seedlings that survived the next year
+    
+    seedlings <- nrow(subset(df, x == i+1 & df$stage== "seedling"))
+    fencedseedlings <- nrow(subset(df, x == i+1 & df$stage== "seedling" & df$fenced == "y"))
+    notfencedseedlings <- nrow(subset(df, x == i+1 & df$stage== "seedling" & df$fenced == "n"))
+    
+    # Adding a fertility column to seedlings. 
+    # instead could Do something like if seedling and length > 10cm then call it vegetative/repro and add to 
+    #  seed count???
+    fert$seedling <- seedlings * (fert$fruits / sum(fert$fruits, na.rm = T))
+    fencedfert$seedling <- fencedseedlings * (fencedfert$fruits / sum(fencedfert$fruits, na.rm = T))
+    notfencedfert$seedling <- notfencedseedlings * (notfencedfert$fruits / sum(notfencedfert$fruits, na.rm = T))
+    
+    # Add some survival to dormant individuals other than 100% since we only note dormat indivdiuals when they are
+    #seen above ground again so 100% survive # the column sums to 1, want some to transition to dead, 
+    # lowering dormant to dormant
+    death.to.dormants_fert <- projection.matrix(fert)[length(unique(df$stage)),length(unique(df$stage))]*dormancy
+    death.to.dormants_fencedfert <- projection.matrix(fencedfert)[length(unique(df$stage)),length(unique(df$stage))]*dormancy
+    death.to.dormants_notfencedfert <- projection.matrix(notfencedfert)[length(unique(df$stage)),length(unique(df$stage))]*dormancy
+    
+    
+    pro.matrix[[as.character(i)]] <- projection.matrix(fert, add = c(length(unique(df$stage)),
+                                                                     length(unique(df$stage)), 
+                                                                     death.to.dormants_fert))
+    fenced.pro.matrix[[as.character(i)]] <- projection.matrix(fencedfert, add = c(length(unique(df$stage)),
+                                                                                  length(unique(df$stage)), 
+                                                                                  death.to.dormants_fencedfert))
+    notfenced.pro.matrix[[as.character(i)]] <- projection.matrix(notfencedfert, add = c(length(unique(df$stage)),
+                                                                                        length(unique(df$stage)), 
+                                                                                        death.to.dormants_notfencedfert))
+  }
+  
+  SiteMatrix$pro.matrix <- pro.matrix
+  SiteMatrix$fenced.pro.matrix <- fenced.pro.matrix
+  SiteMatrix$notfenced.pro.matrix <- notfenced.pro.matrix
+  
+  
+  ## 2
+  # Projection matrices divdied by Site
+  
+  Site.matrix <- vector("list", length(years))
+  fenced.Site.matrix <- vector("list", length(years))
+  notfenced.Site.matrix <- vector("list", length(years))
+  
+  promatrix <- vector("list", length(years))
+  names(promatrix) <- years
+  fenced.promatrix <- vector("list", length(years))
+  names(fenced.promatrix) <- years
+  notfenced.promatrix <- vector("list", length(years))
+  names(notfenced.promatrix) <- years
+  
+  #Set variables
+  sites <- unique(df$site)
+  
+  ## Fencing by site
+  for(j in sites){
+    for(i in years){
+      
+      # df$site is Site
+      # x is Year
+      rm(fencedfert)
+      fencedfert <- subset(df, x == i & df$site == j & df$fenced == "y")
+      fencedseedlings <- nrow(subset(df, x == i+1 & df$stage == "seedling" & df$site == j & 
+                                       df$fenced == "y"))
+      
+      # no fencing in site 15 creates errors. Fencing removed from all in 2015
+      if(nrow(fencedfert) == 0){ 
+        fencedfert$seedling <- 0 * (fencedfert$fruits / sum(fencedfert$fruits, na.rm = T))
+        fencedfert$seedling[is.nan(fencedfert$seedling)] <- 0
+        fenced.promatrix[[as.character(i)]] <- projection.matrix(fencedfert)
+      } else {
+        fencedfert$seedling <- fencedseedlings * (fencedfert$fruits / sum(fencedfert$fruits, 
+                                                                          na.rm = T))
+        fencedfert$seedling[is.nan(fencedfert$seedling)] <- 0
+        fenced.promatrix[[as.character(i)]] <- projection.matrix(fencedfert)}	# end if else
+      
+      rm(fert)
+      rm(notfencedfert)
+      fert <- subset(df, x == i & df$site == j)
+      notfencedfert <- subset(df, x == i & df$site == j & df$fenced == "n")
+      
+      # ?projection.matrix uses a column with a stage name as a fertility measure per plant 
+      # fruit production per individual as a percent of the total production that year. Time t
+      # this times the number of seedlings that survived the next year
+      
+      seedlings <- nrow(subset(df, x == i+1 & df$stage == "seedling" & df$site == j))
+      notfencedseedlings <- nrow(subset(df, x == i+1 & df$stage == "seedling" & df$site == j &
+                                          df$fenced == "n"))
+      
+      fert$seedling <- seedlings * (fert$fruits / sum(fert$fruits, na.rm = T))
+      fert$seedling[is.nan(fert$seedling)] <- 0
+      fert$seedling[is.na(fert$seedling)] <- 0
+      notfencedfert$seedling <- notfencedseedlings * (notfencedfert$fruits / sum(notfencedfert$fruits,
+                                                                                 na.rm = T))
+      notfencedfert$seedling[is.nan(notfencedfert$seedling)] <- 0
+      notfencedfert$seedling[is.na(notfencedfert$seedling)] <- 0		 
+      
+      death.to.dormants <- projection.matrix(fert)[length(unique(df$stage)),
+                                                   length(unique(df$stage))]*dormancy
+      
+      promatrix[[as.character(i)]] <- projection.matrix(fert, 
+                                                        add = c(length(unique(df$stage)),
+                                                                length(unique(df$stage)), 
+                                                                death.to.dormants))
+      notfenced.promatrix[[as.character(i)]] <- projection.matrix(notfencedfert, 
+                                                                  add = c(length(unique(df$stage)),
+                                                                          length(unique(df$stage)), 
+                                                                          death.to.dormants))
+    }
+    Site.matrix[[as.character(j)]] <- promatrix
+    fenced.Site.matrix[[as.character(j)]] <- fenced.promatrix
+    notfenced.Site.matrix[[as.character(j)]] <- notfenced.promatrix
+  }
+  
+  # add each year list of matrices to each by site and for only fenced and only not fenced
+  SiteMatrix$Site <- Site.matrix
+  SiteMatrix$fenced <- fenced.Site.matrix
+  SiteMatrix$notfenced <- notfenced.Site.matrix
+  
+  ## 3
+  # Projection matrices divdied by Plot
+  
+  plot.matrix <- vector("list", length(years))
+  names(plot.matrix) <- years
+  plotpromatrix <- vector("list", length(years))
+  names(plotpromatrix) <- years
+  
+  #Set variables
+  Plots <- unique(df$plot)
+  
+  # sample size might be too small per plot
+  ## Plot
+  for(j in Plots){
+    for(i in years){
+      
+      # df$year is Year
+      fertplot <- subset(df, df$year == i & df$plot == j)
+      
+      # ?projection.matrix uses a column with a stage name as a fertility measure per plant 
+      # fruit production per individual as a percent of the total production that year. Time t
+      # this times the number of seedlings that survived the next year
+      
+      seedlings <- nrow(subset(df, df$year == i+1 & df$stage == "seedling" & df$plot == j))
+      fert$seedling <- seedlings * (fert$fruits / sum(fert$fruits, na.rm = T))
+      fert$seedling[is.nan(fert$seedling)] <- 0
+      fert$seedling[is.na(fert$seedling)] <- 0
+      
+      death.to.dormants <- projection.matrix(fertplot)[length(unique(df$stage)),
+                                                       length(unique(df$stage))]*dormancy 
+      
+      plotpromatrix[[as.character(i)]] <- projection.matrix(fert, add = c(length(unique(df$stage)),
+                                                                          length(unique(df$stage)), 
+                                                                          death.to.dormants))
+      
+    }
+    
+    plot.matrix[[as.character(j)]] <- plotpromatrix
+  }
+  
+  # add each year list of matrices to each by site and for only fenced and only not fenced
+  SiteMatrix$plot.matrix <- plot.matrix
+  
+  # The list returned from the function
+  SiteMatrix
+}
+
+```
+
+
+
+DAG #2   
+```{r}
+currentyr <- as.numeric(format(as.Date(Sys.Date(),format="%Y-%m-%d"), "%Y")) -1
+rawdatapath <- paste("Q:/Research/All_Projects_by_Species/Astragalus SPECIES/Astragalus_microcymbus/Asmi_Excel/Yearly Summaries/", 
+                     currentyr,"_asmi/RawData_",
+                     currentyr, ".csv", collapse = '', sep = '')
+
+asmi.raw <- read.csv(path.expand(rawdatapath), na.strings = "na")
+
+# No longer adding climate data to the database
+asmi.raw <- asmi.raw[,grep(paste(c("Temp","Rain","Snow","Aug.Jul"),collapse="|"), names(asmi.raw),
+                           value = TRUE, invert = TRUE)]
+asmi.raw <- asmi.raw[asmi.raw$status != "",]
+asmi.raw$status <- factor(asmi.raw$status)
+#reset factors of browsing to eliminate " "
+asmi.raw$Browsing...Status[asmi.raw$Browsing...Status == "mammal"] <- "Mammal"
+asmi.raw$Browsing...Status <- factor(asmi.raw$Browsing...Status)
+
+#reset factors for fence
+asmi.raw$fence <- factor(asmi.raw$fence)
+
+```
+
+
+```{r}
+library(R2jags)
+#library("reshape2")
+
+head(asmi.climate)
+#asmi.climate$PrevYearMonth <- paste(asmi.climate$Prev12,asmi.climate$Month, sep="_")
+climate.wide <- reshape(asmi.climate[,-8], 
+                        idvar= c("Plot","Site","Creek","Site.1","Prev12"), timevar="Month", 
+                        direction="wide")
+
+asmi.merge <- merge(asmi.raw, climate.wide, by.x = c("AsMi_plot_id","AsMi_site_id","year"), 
+                    by.y = c("Plot","Site","Prev12"))
+
+#for indexing, something like:
+# or if that doesn't work, sort first and then these will be sequential numbers
+plot610 <- which(asmi.merge$AsMi_plot_id==610) #over the length of that
+asmi.merge[plot610,]
+
+length.plots.indexing <- sapply(unique(asmi.merge$AsMi_plot_id), function(plot){
+  index <- which(asmi.merge$AsMi_plot_id == plot)
+  out <- c(min(index),max(index))
+  out
+})
+
+asmi.merge[1:291,]
+
+for(i in 1:length(plot610)){
+  x[plot610[i]]
+}
+
+plots.g <- 30
+sites.Q <- 6 # 5,5,6,4,5
+years.t.g <- apply(table(asmi.merge$year,asmi.merge$AsMi_plot_id),2,function(x)length(x[x>0])) #years per plot
+samplesize.n_g <- apply(table(asmi.merge$AsMi_tag_id,asmi.merge$AsMi_plot_id),2,
+                      function(x) length(x[x>0])) #tags per plot
+
+#do for each plot seperately
+data.asmi1 <- asmi.merge[,c(1,2,3,6,8,46,49,52,55,58)]
+# model with fall precip
+jagsdata1 <- with(data.asmi1, list(y = length, x1 = fruit, x2 = Precip.8, x3 = Precip.9,
+                                  x4 = Precip.10, x5 = Precip.11, x6 = Precip.12,
+                                  N = length(length)))
+
+mu <- predict(lm(length ~ fruit+Precip.8+Precip.9+Precip.10+Precip.11+Precip.12 ,data=data.asmi1))
+
+
+lm1_jags <- function(){
+  #Likelihood:
+  for(i in 1:N){
+    y[i] ~ dnorm(mu[i], tau)
+    mu[i] <- beta[1] + x1[i]*beta[2] + x2[i]*beta[3] + x3[i]*beta[4] + x4[i]*beta[5] +
+      x5[i]*beta[6] + x6[i]*beta[7]
+  }
+  #Priors:
+  for(i in 1:7){
+    beta[i] ~ dnorm(0, 0.001)
+  }
+  sigma ~ dunif(0,100)
+  tau <- 1/(sigma*sigma)
+}
+
+init_values1 <- function(){
+  list(beta = rnorm(7), sigma=runif(1))
+}
+
+params <- c("beta","sigma","deviance")
+
+
+fit_lm1 <- jags(data=jagsdata1, inits=init_values1, parameters.to.save = params,
+                                                   model.file = lm1_jags, n.chains = 3, 
+                                                   n.iter = 10000, n.burnin = 200,
+                                                   n.thin = 10, DIC=TRUE)
+```
+

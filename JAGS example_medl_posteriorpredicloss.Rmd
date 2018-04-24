@@ -13,7 +13,7 @@ library(coda)
 ```
 
 ```{r}
-set.seed(1234)
+set.seed(12)
 samplesize <- 50 
 xc <- sort(rnorm(samplesize)) # covariate
 #to make factor levels
@@ -25,9 +25,9 @@ model.matrix(~xc*xf)
 #y=mx+b
 # set 'true' differences between groups 0 and 1
 int_true_0 <- 30 # intercept for 0
-int_true_m_diff <- 5 # difference between intercepts
+int_true_m_diff <- 8 # difference between intercepts
 slope_true_0 <- 10 # slope for 0
-slope_true_m_diff <- -3 # difference between slopes
+slope_true_m_diff <- -6 # difference between slopes
 
 # predict with perfect model, mu intercept for true 0 level, add xf ... model matrix basically
 mu <- int_true_0 + xf * int_true_m_diff + 
@@ -134,9 +134,14 @@ mu.all <- c()
 y.new <- list()
 for(j in 1:3000){
   for(i in 1:50){
+    
+  #pick random point given the linear model
   mu.all[i] <- rnorm(1,all.parameters[j,1] + all.parameters[j,2]*xc[i],
                      all.parameters[j,4])
+  #expected value of 
+  #By row, how different is that 
   }
+  #need average over chain 
   y.new[[j]] <- mu.all
 }
 
@@ -147,6 +152,14 @@ CV <- apply(sim.data,1,function(x){
   cv <- sd(x)/mean(x)
   cv
 })
+
+#posterior predictice loss  
+
+#average of indiviudal obervation on each parameter set
+new.mus <- apply(sim.data, 2, mean)
+new.vars <- apply(sim.data, 2, var)
+Dsel <- sum(dat$y-new.mus)^2 + sum(new.vars)
+Dsel
 
 hist(CV, xlim=c(sd(y)/mean(y)-0.1,max(CV)), main="Coefficient of variation")
 points(sd(y)/mean(y),100)
@@ -189,6 +202,12 @@ for(j in 1:3000){
 
 sim.data2 <- do.call(rbind,y.new2)
 str(sim.data2)
+
+new.mus2 <- apply(sim.data2, 2, mean)
+new.vars2 <- apply(sim.data2, 2, var)
+Dsel <- sum(dat$y-new.mus2)^2 + sum(new.vars2)
+Dsel
+
 
 
 CV2 <- apply(sim.data2,1,function(x){
@@ -309,6 +328,8 @@ legend("topleft", fill=c(rgb(0,0,1,0.25),rgb(.5,.5,0,0.25)), legend = c("LM1","L
 ```
 
 #look for JAGS eg 2
+Now do WAIC  
+
 ```{r}
 
 
